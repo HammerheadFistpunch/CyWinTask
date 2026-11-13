@@ -34,10 +34,10 @@ TrustResult inspect(const std::string& utf8Path)
 {
     const auto path = wide(utf8Path);
     if (path.empty() || path.rfind(L"\\\\", 0) == 0)
-        return { TrustState::unavailable, -1, "Non évalué", "Fichier distant ou chemin indisponible." };
+        return { TrustState::unavailable, -1, "Not evaluated", "Remote file or unavailable path." };
     if (path.size() >= 3 && path[1] == L':' && path[2] == L'\\'
         && GetDriveTypeW(path.substr(0, 3).c_str()) == DRIVE_REMOTE)
-        return { TrustState::unavailable, -1, "Non évalué", "Fichier sur un lecteur réseau." };
+        return { TrustState::unavailable, -1, "Not evaluated", "File on a network drive." };
     static const std::wstring windows = [] {
         wchar_t buffer[MAX_PATH] {};
         const auto length = GetWindowsDirectoryW(buffer, MAX_PATH);
@@ -63,18 +63,18 @@ TrustResult inspect(const std::string& utf8Path)
     const LONG code = WinVerifyTrust(nullptr, &action, &data);
     if (code == ERROR_SUCCESS)
         return { TrustState::verified, system ? 95 : installed ? 90 : 85,
-            "Signature valide", system ? "Signature Authenticode valide · dossier Windows."
-                : installed ? "Signature Authenticode valide · dossier d'installation."
-                : "Signature Authenticode valide." };
+            "Valid signature", system ? "Valid Authenticode signature · Windows folder."
+                : installed ? "Valid Authenticode signature · installation folder."
+                : "Valid Authenticode signature." };
     if (code == TRUST_E_NOSIGNATURE || code == TRUST_E_SUBJECT_FORM_UNKNOWN || code == TRUST_E_PROVIDER_UNKNOWN)
         return { TrustState::unsignedFile, system ? 55 : installed ? 40 : 25,
-            "Signature non confirmée", system ? "Signature intégrée non confirmée · dossier Windows. Un catalogue système peut signer ce fichier."
-                : installed ? "Signature intégrée non confirmée · dossier d'installation."
-                : "Signature intégrée non confirmée." };
+            "Unconfirmed signature", system ? "Embedded signature unconfirmed · Windows folder. This file may be signed through a system catalog."
+                : installed ? "Embedded signature unconfirmed · installation folder."
+                : "Embedded signature unconfirmed." };
     if (code == TRUST_E_BAD_DIGEST || code == TRUST_E_EXPLICIT_DISTRUST
         || code == CERT_E_UNTRUSTEDROOT || code == TRUST_E_SUBJECT_NOT_TRUSTED)
-        return { TrustState::invalid, 10, "Signature non valide", "La vérification Authenticode a échoué." };
-    return { TrustState::error, -1, "Non évalué", "La vérification de signature n'a pas abouti." };
+        return { TrustState::invalid, 10, "Invalid signature", "Authenticode verification failed." };
+    return { TrustState::error, -1, "Not evaluated", "Signature verification did not complete." };
 }
 }
 
@@ -95,11 +95,11 @@ TrustResult ProcessTrust::get(const std::string& path)
     std::lock_guard lock(mutex_);
     if (const auto found = results_.find(path); found != results_.end()) return found->second;
     if (results_.size() >= 4096 || queue_.size() >= 1024)
-        return { TrustState::unavailable, -1, "Non évalué", "Limite du cache atteinte." };
-    results_.emplace(path, TrustResult { TrustState::pending, -1, "Analyse...", "Vérification locale en cours." });
+        return { TrustState::unavailable, -1, "Not evaluated", "Cache limit reached." };
+    results_.emplace(path, TrustResult { TrustState::pending, -1, "Checking...", "Local verification in progress." });
     queue_.push_back(path);
     ready_.notify_one();
-    return { TrustState::pending, -1, "Analyse...", "Vérification locale en cours." };
+    return { TrustState::pending, -1, "Checking...", "Local verification in progress." };
 }
 void ProcessTrust::run()
 {

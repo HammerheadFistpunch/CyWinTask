@@ -39,7 +39,7 @@ public sealed class ProcessMetadataCollector
         return processes.ToDictionary(p => p.Id, p =>
         {
             metadata.TryGetValue((p.Id, p.Created), out var info);
-            string category = visible.Contains(p.Id) ? "Applications" : p.Id <= 4 || info.Path?.StartsWith(windows, StringComparison.OrdinalIgnoreCase) == true ? "Processus Windows" : "Processus en arrière-plan";
+            string category = visible.Contains(p.Id) ? "Applications" : p.Id <= 4 || info.Path?.StartsWith(windows, StringComparison.OrdinalIgnoreCase) == true ? "Windows processes" : "Background processes";
             return new ProcessMetadata(category, info.Icon);
         });
     }

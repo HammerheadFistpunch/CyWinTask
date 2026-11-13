@@ -23,7 +23,7 @@ internal static class BridgeProgram
     {
         using var buffer = new MemoryStream();
         using (var writer = new BinaryWriter(buffer, Encoding.UTF8, leaveOpen: true)) write(writer);
-        if (buffer.Length > 16 * 1024 * 1024) throw new InvalidOperationException("Trame trop volumineuse.");
+        if (buffer.Length > 16 * 1024 * 1024) throw new InvalidOperationException("Frame too large.");
         output.Write((int)buffer.Length);
         output.Write(buffer.GetBuffer(), 0, (int)buffer.Length);
         output.Flush();
@@ -108,9 +108,9 @@ internal static class BridgeProgram
         {
             if (parts[0] == "E")
             {
-                if (id == protectedUiPid) throw new InvalidOperationException("CyWinTask ne peut pas s’arrêter lui-même.");
+                if (id == protectedUiPid) throw new InvalidOperationException("CyWinTask cannot end itself.");
                 ProcessActions.Terminate(sample);
-                Reply(requestId, true, "Arrêt demandé.");
+                Reply(requestId, true, "Stop requested.");
             }
             else if (parts[0] == "D") Reply(requestId, true, AdvancedReport.Read(sample));
         }
@@ -167,32 +167,32 @@ internal static class AdvancedReport
     public static string Read(ProcessSample sample)
     {
         var text = new StringBuilder(ProcessActions.Describe(sample));
-        text.AppendLine().AppendLine().AppendLine("COMPTEURS DU PROCESSUS");
+        text.AppendLine().AppendLine().AppendLine("PROCESS COUNTERS");
         using var process = Process.GetProcessById(sample.Id);
         _ = process.Handle;
         if (process.StartTime.ToUniversalTime().ToFileTimeUtc() != sample.Created)
-            throw new InvalidOperationException("Processus disparu ou PID réutilisé.");
+            throw new InvalidOperationException("The process exited or its PID was reused.");
         void Add(string label, Func<object?> read)
         {
             try { text.AppendLine(label + " : " + read()); }
-            catch (Exception ex) { text.AppendLine(label + " : indisponible (" + ex.Message + ")"); }
+            catch (Exception ex) { text.AppendLine(label + ": unavailable (" + ex.Message + ")"); }
         }
         Add("Session", () => process.SessionId);
-        Add("Priorité", () => process.PriorityClass);
-        Add("Affinité CPU", () => "0x" + process.ProcessorAffinity.ToInt64().ToString("X"));
-        Add("Temps CPU total", () => process.TotalProcessorTime);
-        Add("Mémoire résidente", () => $"{process.WorkingSet64 / 1048576d:N1} Mo");
-        Add("Mémoire privée", () => $"{process.PrivateMemorySize64 / 1048576d:N1} Mo");
-        Add("Espace virtuel", () => $"{process.VirtualMemorySize64 / 1048576d:N1} Mo");
+        Add("Priority", () => process.PriorityClass);
+        Add("CPU affinity", () => "0x" + process.ProcessorAffinity.ToInt64().ToString("X"));
+        Add("Total CPU time", () => process.TotalProcessorTime);
+        Add("Working set", () => $"{process.WorkingSet64 / 1048576d:N1} MiB");
+        Add("Private memory", () => $"{process.PrivateMemorySize64 / 1048576d:N1} MiB");
+        Add("Virtual address space", () => $"{process.VirtualMemorySize64 / 1048576d:N1} MiB");
         Add("Threads", () => process.Threads.Count);
         Add("Handles", () => process.HandleCount);
-        text.AppendLine().AppendLine("MODULES CHARGÉS (200 maximum)");
+        text.AppendLine().AppendLine("LOADED MODULES (up to 200)");
         try
         {
             foreach (ProcessModule module in process.Modules.Cast<ProcessModule>().Take(200))
-                text.AppendLine($"{module.ModuleName} · {module.ModuleMemorySize / 1024:N0} Ko\n  {module.FileName}");
+                text.AppendLine($"{module.ModuleName} · {module.ModuleMemorySize / 1024:N0} KiB\n  {module.FileName}");
         }
-        catch (Exception ex) { text.AppendLine("Modules indisponibles : " + ex.Message); }
+        catch (Exception ex) { text.AppendLine("Modules unavailable: " + ex.Message); }
         return text.ToString();
     }
 }

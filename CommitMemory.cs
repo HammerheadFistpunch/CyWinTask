@@ -5,8 +5,8 @@ public static class CommitMemory
     public static PerfMetric Read()
     {
         var info = new Information();
-        if (!GetPerformanceInfo(out info, (uint)Marshal.SizeOf<Information>())) return new("commit", "Mémoire virtuelle engagée", null, "Go");
-        return new("commit", "Mémoire virtuelle engagée", info.Total * (double)info.PageSize / 1073741824, "Go", info.Limit * (double)info.PageSize / 1073741824);
+        if (!GetPerformanceInfo(out info, (uint)Marshal.SizeOf<Information>())) return new("commit", "Committed memory", null, "GiB");
+        return new("commit", "Committed memory", info.Total * (double)info.PageSize / 1073741824, "GiB", info.Limit * (double)info.PageSize / 1073741824);
     }
     [StructLayout(LayoutKind.Sequential)] private struct Information
     {

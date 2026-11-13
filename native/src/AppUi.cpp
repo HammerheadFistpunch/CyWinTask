@@ -65,13 +65,13 @@ std::string processAge(const std::int64_t created, const std::int64_t unixMs)
     const auto now = 116444736000000000LL + unixMs * 10000LL;
     const auto seconds = std::max<std::int64_t>(0, (now - created) / 10000000LL);
     char buffer[48] {};
-    if (seconds >= 86400) std::snprintf(buffer, sizeof(buffer), "%lld j %02lld h", seconds / 86400, seconds / 3600 % 24);
+    if (seconds >= 86400) std::snprintf(buffer, sizeof(buffer), "%lld d %02lld h", seconds / 86400, seconds / 3600 % 24);
     else std::snprintf(buffer, sizeof(buffer), "%02lld:%02lld:%02lld", seconds / 3600, seconds / 60 % 60, seconds % 60);
     return buffer;
 }
 const char* categoryName(const std::uint8_t category)
 {
-    return category == 0 ? "Applications" : category == 2 ? "Processus Windows" : "Arrière-plan";
+    return category == 0 ? "Applications" : category == 2 ? "Windows processes" : "Background";
 }
 const MetricInfo* metric(const DeviceInfo& device, const std::string& id)
 {
@@ -128,7 +128,7 @@ void trustBar(const TrustResult& trust, const float height)
     } else draw->AddText(ImVec2(position.x + cyui::dp(5.0f),
         position.y + (height - ImGui::GetFontSize()) * 0.5f), colors.textDim,
         trust.state == TrustState::pending ? "..." : "—");
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s\n%s\nIndice local, pas une analyse antivirus.",
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s\n%s\nLocal trust score only.",
         trust.label, trust.explanation);
 }
 class IconCache {
@@ -251,42 +251,42 @@ struct AppUi::State {
             item.threads = threads; item.handles = threads * 31 + id % 59; item.category = category;
             snapshot.processes.push_back(std::move(item));
         };
-        addProcess(4200, 0, "Atelier.exe", 6.4, 4.2, 1840, 42, 0);
-        addProcess(4201, 4200, "Atelier Renderer.exe", 3.1, 27.5, 920, 19, 1);
-        addProcess(4202, 4200, "Atelier Media.exe", 0.8, 5.1, 215, 11, 1);
-        addProcess(5600, 0, "Navigateur.exe", 2.3, 0.3, 690, 27, 0);
-        addProcess(5601, 5600, "Navigateur Renderer.exe", 1.7, 8.6, 412, 15, 1);
+        addProcess(4200, 0, "Studio.exe", 6.4, 4.2, 1840, 42, 0);
+        addProcess(4201, 4200, "Studio Renderer.exe", 3.1, 27.5, 920, 19, 1);
+        addProcess(4202, 4200, "Studio Media.exe", 0.8, 5.1, 215, 11, 1);
+        addProcess(5600, 0, "Browser.exe", 2.3, 0.3, 690, 27, 0);
+        addProcess(5601, 5600, "Browser Renderer.exe", 1.7, 8.6, 412, 15, 1);
         addProcess(6800, 0, "Notes.exe", 0.2, 0.0, 155, 12, 0);
-        addProcess(8900, 0, "Synchronisation.exe", 0.6, 0.0, 188, 9, 1);
-        addProcess(8901, 8900, "Synchronisation Worker.exe", 0.4, 0.0, 120, 7, 1);
-        addProcess(1100, 0, "Système", 0.5, 0.0, 305, 84, 2);
-        addProcess(1110, 1100, "Service audio", 0.1, 0.0, 68, 14, 2);
+        addProcess(8900, 0, "Sync.exe", 0.6, 0.0, 188, 9, 1);
+        addProcess(8901, 8900, "Sync Worker.exe", 0.4, 0.0, 120, 7, 1);
+        addProcess(1100, 0, "System", 0.5, 0.0, 305, 84, 2);
+        addProcess(1110, 1100, "Audio service", 0.1, 0.0, 68, 14, 2);
         for (int i = 0; i < 24; ++i)
-            addProcess(12000 + i, 0, ("Service de démonstration " + std::to_string(i + 1)).c_str(),
+            addProcess(12000 + i, 0, ("Demo service " + std::to_string(i + 1)).c_str(),
                 i % 6 == 0 ? 0.3 : 0.0, 0.0, 12 + i * 3, 2 + i % 7, i % 3 == 0 ? 2 : 1);
         snapshot.processes[0].gpuGroup = 31.7;
         snapshot.processes[3].gpuGroup = 8.9;
         snapshot.devices = {
-            { "cpu", "Processeur", "Processeur de démonstration · 8 processeurs logiques", "cpu",
-                { { "cpu", "Utilisation totale", "%", 18.4, 100 }, { "temperature", "Température CPU", "°C", 51, NAN } } },
-            { "memory", "Mémoire", "15,8 / 32 Go utilisés", "memory",
-                { { "used", "Mémoire physique utilisée", "Go", 15.8, 32 },
-                  { "available", "Mémoire physique disponible", "Go", 16.2, 32 },
-                  { "commit", "Mémoire virtuelle engagée", "Go", 21.3, 48 } } },
-            { "disk0", "Disque 0", "SSD de démonstration", "disk",
-                { { "active", "Temps d'activité", "%", 24, 100 },
-                  { "read", "Lecture", "Mo/s", 18, NAN }, { "write", "Écriture", "Mo/s", 7, NAN } } },
-            { "network0", "Ethernet", "Réseau de démonstration", "network",
-                { { "receive", "Réception", "Mbits/s", 12.4, NAN },
-                  { "send", "Envoi", "Mbits/s", 3.5, NAN } } },
-            { "gpu0", "GPU 0", "GPU de démonstration", "gpu",
-                { { "usage", "Utilisation", "%", 36.2, 100 },
-                  { "temperature", "Température GPU", "°C", 58, NAN },
-                  { "dedicated", "Mémoire dédiée", "Go", 5.2, 16 } } }
+            { "cpu", "Processor", "Demo processor · 8 logical processors", "cpu",
+                { { "cpu", "Total usage", "%", 18.4, 100 }, { "temperature", "CPU temperature", "°C", 51, NAN } } },
+            { "memory", "Memory", "15.8 / 32 GiB used", "memory",
+                { { "used", "Physical memory used", "GiB", 15.8, 32 },
+                  { "available", "Physical memory available", "GiB", 16.2, 32 },
+                  { "commit", "Committed memory", "GiB", 21.3, 48 } } },
+            { "disk0", "Disk 0", "Demo SSD", "disk",
+                { { "active", "Active time", "%", 24, 100 },
+                  { "read", "Read", "MiB/s", 18, NAN }, { "write", "Write", "MiB/s", 7, NAN } } },
+            { "network0", "Ethernet", "Demo network", "network",
+                { { "receive", "Receive", "Mbps", 12.4, NAN },
+                  { "send", "Send", "Mbps", 3.5, NAN } } },
+            { "gpu0", "GPU 0", "Demo GPU", "gpu",
+                { { "usage", "Usage", "%", 36.2, 100 },
+                  { "temperature", "GPU temperature", "°C", 58, NAN },
+                  { "dedicated", "Dedicated memory", "GiB", 5.2, 16 } } }
         };
         for (int i = 0; i < 8; ++i)
             snapshot.devices[0].metrics.push_back({ "core:" + std::to_string(i),
-                "Processeur logique " + std::to_string(i), "%", 8.0 + i * 3.1, 100 });
+                "Logical processor " + std::to_string(i), "%", 8.0 + i * 3.1, 100 });
         selected.insert(identity(snapshot.processes.front()));
         for (const auto& process : snapshot.processes) if (process.category == 0) expanded.insert(identity(process));
         initialExpansion = false;
@@ -348,7 +348,7 @@ struct AppUi::State {
             if (reply.success) {
                 statusMessage = reply.text;
                 cyui::notify(reply.text.c_str(), cyui::Tone::success);
-                if (reply.text != "Arrêt demandé.") { detailText = reply.text; detailsOpen = true; }
+                if (reply.text != "Stop requested.") { detailText = reply.text; detailsOpen = true; }
             } else {
                 statusMessage = reply.text;
                 cyui::notify(reply.text.c_str(), cyui::Tone::error);
@@ -382,7 +382,7 @@ struct AppUi::State {
             if (demoMode) {
                 const int score = process.id == 12009 ? 12 : process.id == 6800 ? 40
                     : process.category == 2 ? 94 : process.category == 0 ? 88 : 63;
-                updated.push_back({ TrustState::verified, score, "Simulation", "Note fictive de démonstration." });
+                updated.push_back({ TrustState::verified, score, "Simulation", "Simulated trust score." });
             } else updated.push_back(trust.get(process.path));
         }
         bool changed = updated.size() != trustScores.size();
@@ -589,11 +589,11 @@ struct AppUi::State {
     void requestDetails(const ProcessInfo& process)
     {
         if (demoMode) {
-            detailText = process.name + " · PID " + std::to_string(process.id) + "\nDonnées fictives de démonstration.";
+            detailText = process.name + " · PID " + std::to_string(process.id) + "\nSimulated demo data.";
             detailsOpen = true;
             return;
         }
-        detailText = "Lecture des informations...";
+        detailText = "Loading details...";
         detailsOpen = true;
         bridge.send("D " + std::to_string(nextRequest++) + " " + std::to_string(process.id)
             + " " + std::to_string(process.created) + "\n");
@@ -607,18 +607,18 @@ struct AppUi::State {
     }
     void processActions(const ProcessInfo& process)
     {
-        if (ImGui::MenuItem(selected.size() > 1 ? "Arrêter les tâches sélectionnées..." : "Arrêter le processus...",
+        if (ImGui::MenuItem(selected.size() > 1 ? "End selected tasks..." : "End process...",
                             nullptr, false, !demoMode)) askStop();
-        if (ImGui::MenuItem("Informations avancées...")) requestDetails(process);
+        if (ImGui::MenuItem("Advanced details...")) requestDetails(process);
         ImGui::Separator();
         const bool hasPath = !process.path.empty();
-        if (ImGui::MenuItem("Ouvrir l'emplacement", nullptr, false, hasPath)) {
+        if (ImGui::MenuItem("Open file location", nullptr, false, hasPath)) {
             const auto path = wide(process.path);
             const auto parameter = L"/select,\"" + path + L"\"";
             ShellExecuteW(nullptr, L"open", L"explorer.exe", parameter.c_str(), nullptr, SW_SHOWNORMAL);
         }
-        if (ImGui::MenuItem("Copier le chemin", nullptr, false, hasPath)) ImGui::SetClipboardText(process.path.c_str());
-        if (ImGui::MenuItem("Copier le nom et le PID")) {
+        if (ImGui::MenuItem("Copy file path", nullptr, false, hasPath)) ImGui::SetClipboardText(process.path.c_str());
+        if (ImGui::MenuItem("Copy name and PID")) {
             const auto label = process.name + " · PID " + std::to_string(process.id);
             ImGui::SetClipboardText(label.c_str());
         }
@@ -626,15 +626,15 @@ struct AppUi::State {
     void statusBar()
     {
         if (cyui::beginStatusBar("##status")) {
-            if (demoMode) cyui::statusText(cyui::Tone::info, "Données fictives · Démonstration");
-            else if (paused) cyui::statusText(cyui::Tone::warning, "Actualisation en pause");
+            if (demoMode) cyui::statusText(cyui::Tone::info, "Simulated data · Demo");
+            else if (paused) cyui::statusText(cyui::Tone::warning, "Updates paused");
             else if (!error.empty()) cyui::statusText(cyui::Tone::error, "%s", error.c_str());
             else if (!statusMessage.empty()) cyui::statusText(cyui::Tone::success, "%s", statusMessage.c_str());
-            else if (hasSnapshot) cyui::statusText(cyui::Tone::neutral, "1 s · Collecte %.1f ms · %zu processus", snapshot.collectMs, snapshot.processes.size());
-            else cyui::statusText(cyui::Tone::neutral, "Connexion au collecteur...");
+            else if (hasSnapshot) cyui::statusText(cyui::Tone::neutral, "1 s · Sampling %.1f ms · %zu processes", snapshot.collectMs, snapshot.processes.size());
+            else cyui::statusText(cyui::Tone::neutral, "Connecting to collector...");
             ImGui::SameLine();
             cyui::alignRight(cyui::dp(235.0f));
-            cyui::textFaint("Ctrl+1/2 · Ctrl+F · Ctrl/Maj");
+            cyui::textFaint("Ctrl+1/2 · Ctrl+F · Ctrl/Shift");
         }
         cyui::endStatusBar();
     }
@@ -643,15 +643,15 @@ struct AppUi::State {
         if (cyui::beginTopBar("##top")) {
             const bool compact = ImGui::GetWindowWidth() < cyui::dp(850.0f);
             cyui::heading("CyWinTask", 3);
-            if (demoMode && !compact) { ImGui::SameLine(); cyui::badge("DÉMO", cyui::Tone::warning); }
+            if (demoMode && !compact) { ImGui::SameLine(); cyui::badge("DEMO", cyui::Tone::warning); }
             ImGui::SameLine(0.0f, cyui::dp(compact ? 8.0f : 18.0f));
-            const char* pages[] { "Processus", "Performance" };
+            const char* pages[] { "Processes", "Performance" };
             int page = performancePage ? 1 : 0;
             if (cyui::segmented("##page", pages, 2, &page, cyui::dp(compact ? 190.0f : 250.0f))) switchPage(page == 1);
             ImGui::SameLine();
             cyui::alignRight(cyui::dp(compact ? 175.0f : 245.0f));
             if (compact) {
-                if (cyui::button("Texte", cyui::Variant::secondary)) ImGui::OpenPopup("##textScale");
+                if (cyui::button("Text", cyui::Variant::secondary)) ImGui::OpenPopup("##textScale");
                 if (ImGui::BeginPopup("##textScale")) {
                     if (cyui::button("A−##smaller", cyui::Variant::secondary)) ui_scale::adjust(-10);
                     ImGui::SameLine();
@@ -669,12 +669,12 @@ struct AppUi::State {
             }
             ImGui::SameLine();
             ImGui::BeginDisabled(demoMode);
-            if (cyui::button(paused ? "Reprendre" : "Pause", cyui::Variant::secondary)) {
+            if (cyui::button(paused ? "Resume" : "Pause", cyui::Variant::secondary)) {
                 paused = !paused;
                 bridge.send(paused ? "P 1\n" : "P 0\n");
             }
             ImGui::EndDisabled();
-            cyui::tooltip("Suspendre ou reprendre la collecte");
+            cyui::tooltip("Pause or resume sampling");
         }
         cyui::endTopBar();
     }
@@ -683,7 +683,7 @@ struct AppUi::State {
         if (cyui::beginToolbar("##processOverview")) {
             const auto& colors = cyui::palette();
             if (withTitle) {
-                cyui::heading("Processus", 3);
+                cyui::heading("Processes", 3);
                 cyui::toolbarSeparator();
             }
             cyui::textDim("CPU"); ImGui::SameLine();
@@ -695,12 +695,12 @@ struct AppUi::State {
                 cyui::textColoured(colors.text, "%.0f %%", snapshot.memoryUsedGb / snapshot.memoryTotalGb * 100.0);
             else cyui::textFaint("—");
             cyui::toolbarSeparator();
-            cyui::textDim("Processus"); ImGui::SameLine();
+            cyui::textDim("Processes"); ImGui::SameLine();
             cyui::textColoured(colors.text, "%zu", snapshot.processes.size());
             if (!selected.empty()) {
                 ImGui::SameLine();
                 cyui::alignRight(cyui::dp(150.0f));
-                cyui::textColoured(colors.accentText, "%zu sélectionné(s)", selected.size());
+                cyui::textColoured(colors.accentText, "%zu selected", selected.size());
             }
         }
         cyui::endToolbar();
@@ -719,15 +719,15 @@ struct AppUi::State {
             return;
         }
         ImGui::TableSetupScrollFreeze(0, 1);
-        ImGui::TableSetupColumn("Nom du processus", ImGuiTableColumnFlags_DefaultSort, 0.31f, 0);
-        ImGui::TableSetupColumn("Confiance", ImGuiTableColumnFlags_PreferSortDescending, 0.09f, 1);
+        ImGui::TableSetupColumn("Process name", ImGuiTableColumnFlags_DefaultSort, 0.31f, 0);
+        ImGui::TableSetupColumn("Trust", ImGuiTableColumnFlags_PreferSortDescending, 0.09f, 1);
         ImGui::TableSetupColumn("PID", ImGuiTableColumnFlags_PreferSortAscending, 0.06f, 2);
         ImGui::TableSetupColumn("CPU", ImGuiTableColumnFlags_PreferSortDescending, 0.09f, 3);
         ImGui::TableSetupColumn("GPU", ImGuiTableColumnFlags_PreferSortDescending, 0.09f, 4);
-        ImGui::TableSetupColumn("Mémoire", ImGuiTableColumnFlags_PreferSortDescending, 0.16f, 5);
+        ImGui::TableSetupColumn("Memory", ImGuiTableColumnFlags_PreferSortDescending, 0.16f, 5);
         ImGui::TableSetupColumn("Threads", ImGuiTableColumnFlags_PreferSortDescending, 0.06f, 6);
         ImGui::TableSetupColumn("Handles", ImGuiTableColumnFlags_PreferSortDescending, 0.07f, 7);
-        ImGui::TableSetupColumn("Durée", ImGuiTableColumnFlags_PreferSortDescending, 0.07f, 8);
+        ImGui::TableSetupColumn("Uptime", ImGuiTableColumnFlags_PreferSortDescending, 0.07f, 8);
         ImGui::TableHeadersRow();
         if (auto* specs = ImGui::TableGetSortSpecs(); specs && specs->SpecsDirty && specs->SpecsCount > 0) {
             sortColumn = static_cast<int>(specs->Specs[0].ColumnUserID);
@@ -811,13 +811,13 @@ struct AppUi::State {
             ImGui::TableSetColumnIndex(4);
             usageBar(gpu, std::isfinite(gpu) ? format("%.1f %%", gpu) : "—", false,
                 compactProcesses ? 18.0f : 22.0f);
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s · moteur GPU le plus sollicité%s",
-                treeMode && row.hasChildren ? "Groupe avec processus associés" : "Processus seul",
-                std::isfinite(gpu) ? "" : " · compteur indisponible");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s · busiest GPU engine%s",
+                treeMode && row.hasChildren ? "Group including related processes" : "Single process",
+                std::isfinite(gpu) ? "" : " · counter unavailable");
             const double memoryMb = process.workingSet / 1048576.0;
             const double memoryPercent = snapshot.memoryTotalGb > 0 ? memoryMb / (snapshot.memoryTotalGb * 1024.0) * 100.0 : 0.0;
             ImGui::TableSetColumnIndex(5);
-            usageBar(memoryPercent, format("%.1f Mo", memoryMb) + " · " + format("%.1f %%", memoryPercent), true,
+            usageBar(memoryPercent, format("%.1f MiB", memoryMb) + " · " + format("%.1f %%", memoryPercent), true,
                 compactProcesses ? 18.0f : 22.0f);
             ImGui::TableSetColumnIndex(6); ImGui::Text("%d", process.threads);
             ImGui::TableSetColumnIndex(7); ImGui::Text("%d", process.handles);
@@ -830,12 +830,12 @@ struct AppUi::State {
     {
         if (cyui::beginCard("##processInspector", nullptr, compactProcesses ? 120.0f : 145.0f)) {
             if (selected.empty()) {
-                cyui::heading("Inspection rapide", 3);
-                cyui::textDim("Sélectionnez un processus pour voir son identité, son chemin et la note de confiance.");
-                cyui::textFaint("Indice local basé sur la signature Authenticode et l'emplacement du fichier ; ce n'est pas un antivirus.");
+                cyui::heading("Quick details", 3);
+                cyui::textDim("Select a process to see its identity, path, and trust score.");
+                cyui::textFaint("Local trust score based on the Authenticode signature and file location.");
             } else if (selected.size() > 1) {
-                cyui::heading("Sélection multiple", 3);
-                cyui::textDim("%zu processus sélectionnés · clic droit pour les actions disponibles.", selected.size());
+                cyui::heading("Multiple selection", 3);
+                cyui::textDim("%zu processes selected · right-click for actions.", selected.size());
             } else if (const auto* process = find(*selected.begin())) {
                 const auto index = static_cast<std::size_t>(process - snapshot.processes.data());
                 const auto& result = trustScores[index];
@@ -844,18 +844,18 @@ struct AppUi::State {
                 if (result.score >= 0) cyui::textColoured(result.score >= 80 ? cyui::palette().success
                     : result.score >= 55 ? cyui::palette().info
                     : result.score >= 30 ? cyui::palette().warning : cyui::palette().error,
-                    "Confiance %d/100 · %s", result.score, result.label);
-                else cyui::textFaint("Confiance — · %s", result.label);
-                cyui::textDim("PID %d · Parent %d · %s · %s · CPU %.1f %% · GPU %s · %.1f Mo",
+                    "Trust %d/100 · %s", result.score, result.label);
+                else cyui::textFaint("Trust — · %s", result.label);
+                cyui::textDim("PID %d · Parent PID %d · %s · %s · CPU %.1f %% · GPU %s · %.1f MiB",
                     process->id, process->parent, categoryName(process->category),
                     processAge(process->created, snapshot.unixMs).c_str(),
                     process->cpu, std::isfinite(process->gpu) ? format("%.1f %%", process->gpu).c_str() : "—",
                     process->workingSet / 1048576.0);
                 cyui::textFaint("%s", result.explanation);
                 if (!process->path.empty()) {
-                    cyui::textDim("Fichier : %s", process->path.c_str());
+                    cyui::textDim("File: %s", process->path.c_str());
                     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", process->path.c_str());
-                } else cyui::textFaint("Chemin du fichier indisponible.");
+                } else cyui::textFaint("File path unavailable.");
             }
         }
         cyui::endCard();
@@ -868,7 +868,7 @@ struct AppUi::State {
         }
         if (compactProcesses) processOverview(true);
         else {
-            cyui::panelHeader("Processus", "Recherche, tri et inspection des tâches en cours");
+            cyui::panelHeader("Processes", "Search, sort, and inspect running tasks");
             cyui::space(8);
             processOverview(false);
         }
@@ -878,22 +878,22 @@ struct AppUi::State {
             if (focusSearch) { ImGui::SetKeyboardFocusHere(); focusSearch = false; }
             const float actions = cyui::dp(search[0] ? 325.0f : 255.0f);
             const float width = std::max(cyui::dp(180.0f), ImGui::GetContentRegionAvail().x - actions);
-            if (cyui::searchField("##search", search, sizeof(search), "Nom, PID ou pid:1234...", width))
+            if (cyui::searchField("##search", search, sizeof(search), "Name, PID, or pid:1234...", width))
                 dirty = true;
-            cyui::tooltip("Saisissez pid:1234 pour isoler un processus précis.");
+            cyui::tooltip("Enter pid:1234 to show a specific process.");
             if (search[0]) {
                 ImGui::SameLine();
-                if (cyui::button("Effacer", cyui::Variant::ghost)) { search[0] = 0; dirty = true; }
+                if (cyui::button("Clear", cyui::Variant::ghost)) { search[0] = 0; dirty = true; }
             }
             ImGui::SameLine();
             ImGui::BeginDisabled(selected.size() != 1);
-            if (cyui::button("Inspecter", cyui::Variant::secondary) && selected.size() == 1)
+            if (cyui::button("Inspect", cyui::Variant::secondary) && selected.size() == 1)
                 if (const auto* process = find(*selected.begin())) requestDetails(*process);
             ImGui::EndDisabled();
             ImGui::SameLine();
             ImGui::BeginDisabled(demoMode || selected.empty());
-            if (cyui::dangerButton(selected.size() > 1 ? ("Arrêter " + std::to_string(selected.size()) + " tâches").c_str()
-                                                       : "Arrêter la tâche"))
+            if (cyui::dangerButton(selected.size() > 1 ? ("End " + std::to_string(selected.size()) + " tasks").c_str()
+                                                       : "End task"))
                 askStop();
             ImGui::EndDisabled();
         }
@@ -901,18 +901,18 @@ struct AppUi::State {
         cyui::space(4);
         const bool narrowFilters = ImGui::GetContentRegionAvail().x < cyui::dp(830.0f);
         const auto filterOptions = [this] {
-            if (ImGui::Checkbox("Regrouper par type", &groupByType)) dirty = true;
+            if (ImGui::Checkbox("Group by type", &groupByType)) dirty = true;
             ImGui::SameLine(0.0f, cyui::dp(16.0f));
-            if (ImGui::Checkbox("Processus associés", &treeMode)) dirty = true;
+            if (ImGui::Checkbox("Related processes", &treeMode)) dirty = true;
             ImGui::SameLine(0.0f, cyui::dp(16.0f));
             ImGui::Checkbox("Compact", &compactProcesses);
             ImGui::SameLine(0.0f, cyui::dp(16.0f));
             ImGui::Checkbox("Inspection", &showProcessInspector);
         };
         if (cyui::beginToolbar("##processFilters")) {
-            cyui::textDim("Afficher"); ImGui::SameLine();
+            cyui::textDim("Show"); ImGui::SameLine();
             ImGui::SetNextItemWidth(cyui::dp(220.0f));
-            const char* filters[] { "Tous les processus", "Applications", "Arrière-plan", "Processus Windows" };
+            const char* filters[] { "All processes", "Applications", "Background", "Windows processes" };
             if (ImGui::Combo("##categoryFilter", &categoryFilter, filters, 4)) dirty = true;
             if (!narrowFilters) { ImGui::SameLine(0.0f, cyui::dp(16.0f)); filterOptions(); }
         }
@@ -927,8 +927,8 @@ struct AppUi::State {
         const bool inspectorVisible = showProcessInspector && available >= cyui::dp(340.0f);
         const float inspectorHeight = cyui::dp(compactProcesses ? 120.0f : 145.0f);
         const float tableHeight = inspectorVisible ? std::max(cyui::dp(140.0f), available - inspectorHeight - cyui::dp(8.0f)) : available;
-        if (!hasSnapshot) cyui::emptyState("En attente des processus", "Le collecteur démarre.", cyui::icon::refresh);
-        else if (display.empty()) cyui::emptyState("Aucun processus trouvé", "Modifiez la recherche ou le filtre.", cyui::icon::search);
+        if (!hasSnapshot) cyui::emptyState("Waiting for process data", "Starting the collector.", cyui::icon::refresh);
+        else if (display.empty()) cyui::emptyState("No processes found", "Change the search or filter.", cyui::icon::search);
         else processTable(tableHeight);
         if (inspectorVisible) { cyui::space(4); processInspector(); }
     }
@@ -994,7 +994,7 @@ struct AppUi::State {
         };
         const float leftMargin = std::max(cyui::dp(37.0f), labelWidth(axisLabel(leftMaximum)) + cyui::dp(7.0f));
         const double rateMaximum = disk && diskRateScale.count(device.id) ? diskRateScale.at(device.id) : 1.0;
-        const float rightMargin = disk ? labelWidth(format("%.0f", rateMaximum) + " Mo/s") + cyui::dp(9.0f) : 0.0f;
+        const float rightMargin = disk ? labelWidth(format("%.0f", rateMaximum) + " MiB/s") + cyui::dp(9.0f) : 0.0f;
         const float available = ImGui::GetContentRegionAvail().x;
         const float width = std::max(cyui::dp(50.0f), available - leftMargin - rightMargin);
         const float bottomMargin = std::max(cyui::dp(17.0f), fontSize + cyui::dp(4.0f));
@@ -1013,7 +1013,7 @@ struct AppUi::State {
                 std::clamp(y - fontSize * 0.5f, plotMin.y, plotMax.y - fontSize)),
                 cyui::palette().textDim, left.c_str());
             if (disk) {
-                const auto label = format("%.0f", rateMaximum * step / 4.0) + " Mo/s";
+                const auto label = format("%.0f", rateMaximum * step / 4.0) + " MiB/s";
                 draw->AddText(font, fontSize,
                     ImVec2(plotMax.x + cyui::dp(3.0f),
                         std::clamp(y - fontSize * 0.5f, plotMin.y, plotMax.y - fontSize)),
@@ -1058,7 +1058,7 @@ struct AppUi::State {
         ImGui::TextUnformatted(value.label.c_str());
         ImGui::SameLine();
         if (std::isfinite(value.value)) cyui::textColoured(seriesColor(device, value), "%.1f %s", value.value, value.unit.c_str());
-        else cyui::textFaint("Indisponible");
+        else cyui::textFaint("Unavailable");
         chart(device, { &value }, height);
     }
     void resourceDetails(const DeviceInfo& device)
@@ -1067,19 +1067,19 @@ struct AppUi::State {
         cyui::textDim("%s", device.description.c_str());
         if (const auto* temperature = metric(device, "temperature")) {
             if (std::isfinite(temperature->value)) cyui::badge((format("%.0f", temperature->value) + " °C").c_str(), cyui::Tone::neutral);
-            else cyui::textFaint("Température indisponible");
+            else cyui::textFaint("Temperature unavailable");
         }
         cyui::space(12);
         if (device.kind == "cpu") {
-            if (ImGui::Checkbox("Afficher les processeurs logiques", &showCores)) {}
+            if (ImGui::Checkbox("Show logical processors", &showCores)) {}
             if (showCores) {
-                const char* modes[] { "Compacte (Windows)", "Détaillée" };
+                const char* modes[] { "Compact (Windows)", "Detailed" };
                 int mode = compactCores ? 0 : 1;
                 if (cyui::segmented("##cpuMode", modes, 2, &mode, cyui::dp(340.0f))) compactCores = mode == 0;
             }
             if (const auto* total = metric(device, "cpu")) {
                 if (!showCores || !compactCores) chartMetric(device, *total, 165);
-                else cyui::textDim("Utilisation totale : %.1f %%", total->value);
+                else cyui::textDim("Total usage : %.1f %%", total->value);
             }
             if (showCores) {
                 std::vector<const MetricInfo*> cores;
@@ -1125,11 +1125,11 @@ struct AppUi::State {
             : (compactGraphCards ? 195.0f : 280.0f);
         const std::string id = "##graphCard_" + device.id;
         if (cyui::beginCard(id.c_str(), nullptr, cardHeight)) {
-            cyui::heading(device.kind == "memory" ? "Mémoire" : device.title.c_str(), 3);
+            cyui::heading(device.kind == "memory" ? "Memory" : device.title.c_str(), 3);
             if (!single) {
                 ImGui::SameLine();
                 cyui::alignRight(cyui::dp(28.0f));
-                if (cyui::iconButton(cyui::icon::newWindow, "Ouvrir ce graphique dans une fenêtre séparée",
+                if (cyui::iconButton(cyui::icon::newWindow, "Open this graph in a separate window",
                     false, 0, cyui::dp(26.0f, 24.0f))) {
                     detached[device.id] = true;
                     if (!demoMode) bridge.send("M 1\n");
@@ -1139,7 +1139,7 @@ struct AppUi::State {
                 cyui::ScopedFont font(cyui::boldFont(), 1.08f);
                 if (std::isfinite(primary->value))
                     cyui::textColoured(seriesColor(device, *primary), "%.1f %s", primary->value, primary->unit.c_str());
-                else cyui::textFaint("Mesure indisponible");
+                else cyui::textFaint("Measurement unavailable");
             }
             {
                 cyui::ScopedFont font(nullptr, 0.88f);
@@ -1147,8 +1147,8 @@ struct AppUi::State {
                     for (std::size_t i = 0; i < series.size(); ++i) {
                         const auto* value = series[i];
                         if (!value) continue;
-                        const char* shortName = device.kind == "memory" ? (i == 0 ? "RAM" : "Virt.")
-                            : device.kind == "disk" ? (i == 0 ? "Act." : i == 1 ? "L" : "E")
+                        const char* shortName = device.kind == "memory" ? (i == 0 ? "RAM" : "Commit")
+                            : device.kind == "disk" ? (i == 0 ? "Active" : i == 1 ? "L" : "E")
                             : (i == 0 ? "R" : "E");
                         if (i > 0) ImGui::SameLine(0.0f, cyui::dp(8.0f));
                         if (std::isfinite(value->value))
@@ -1159,10 +1159,10 @@ struct AppUi::State {
                 } else {
                     std::string detail;
                     if (const auto* temperature = metric(device, "temperature"); temperature && std::isfinite(temperature->value))
-                        detail = "Température " + format("%.0f", temperature->value) + " °C";
+                        detail = "Temperature " + format("%.0f", temperature->value) + " °C";
                     if (const auto* dedicated = metric(device, "dedicated"); dedicated && std::isfinite(dedicated->value))
-                        detail += (detail.empty() ? "" : "  ·  ") + std::string("VRAM ") + format("%.1f", dedicated->value) + " Go";
-                    if (detail.empty()) detail = "Historique des 60 dernières secondes";
+                        detail += (detail.empty() ? "" : "  ·  ") + std::string("VRAM ") + format("%.1f", dedicated->value) + " GiB";
+                    if (detail.empty()) detail = "Last 60 seconds";
                     cyui::textDim("%s", detail.c_str());
                 }
             }
@@ -1175,11 +1175,11 @@ struct AppUi::State {
     {
         if (cyui::beginCard(id, nullptr, 230.0f)) {
             cyui::heading(title, 3);
-            if (ranking.empty()) cyui::textFaint("Aucun processus mesuré");
+            if (ranking.empty()) cyui::textFaint("No process data");
             else if (ImGui::BeginTable((std::string("##ranking_") + id).c_str(), 2,
                 ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoSavedSettings)) {
-                ImGui::TableSetupColumn("Processus", ImGuiTableColumnFlags_WidthStretch);
-                ImGui::TableSetupColumn("Valeur", ImGuiTableColumnFlags_WidthFixed, cyui::dp(105.0f));
+                ImGui::TableSetupColumn("Processes", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthFixed, cyui::dp(105.0f));
                 for (const int index : ranking) {
                     const auto& process = snapshot.processes[index];
                     ImGui::TableNextRow(ImGuiTableRowFlags_None, cyui::dp(27.0f));
@@ -1187,13 +1187,13 @@ struct AppUi::State {
                     ImGui::PushID(process.id);
                     if (ImGui::Selectable(process.name.c_str(), false, ImGuiSelectableFlags_SpanAllColumns,
                         ImVec2(0.0f, cyui::dp(25.0f)))) focusProcess(process);
-                    if (ImGui::IsItemHovered()) cyui::tooltip("Afficher ce processus dans la liste");
+                    if (ImGui::IsItemHovered()) cyui::tooltip("Show this process in the list");
                     ImGui::PopID();
                     ImGui::TableSetColumnIndex(1);
                     if (byCpu && std::isfinite(process.cpu))
                         cyui::textColoured(heat(process.cpu, false), "%.1f %%", process.cpu);
                     else if (byCpu) cyui::textFaint("—");
-                    else cyui::textColoured(cyui::palette().text, "%.0f Mo", process.workingSet / 1048576.0);
+                    else cyui::textColoured(cyui::palette().text, "%.0f MiB", process.workingSet / 1048576.0);
                 }
                 ImGui::EndTable();
             }
@@ -1207,9 +1207,9 @@ struct AppUi::State {
         if (ImGui::BeginTable("##topProcesses", columns,
             ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_PadOuterX | ImGuiTableFlags_NoSavedSettings)) {
             ImGui::TableNextColumn();
-            topProcessCard("##topCpu", "Processus · CPU", topCpu, true);
+            topProcessCard("##topCpu", "Processes · CPU", topCpu, true);
             ImGui::TableNextColumn();
-            topProcessCard("##topMemory", "Processus · mémoire", topMemory, false);
+            topProcessCard("##topMemory", "Processes · Memory", topMemory, false);
             ImGui::EndTable();
         }
     }
@@ -1223,7 +1223,7 @@ struct AppUi::State {
                 if (device.kind == kind && (only.empty() || device.id == only)) visible.push_back(&device);
         }
         if (visible.empty()) {
-            cyui::emptyState("Mesures en attente", "Les courbes apparaîtront après la collecte.", cyui::icon::refresh);
+            cyui::emptyState("Waiting for measurements", "Graphs appear after sampling starts.", cyui::icon::refresh);
             return;
         }
         const float available = ImGui::GetContentRegionAvail().x;
@@ -1255,61 +1255,61 @@ struct AppUi::State {
         const double temperature = value("temperature");
         if (device.kind == "cpu" || device.kind == "gpu") {
             const double usage = value(device.kind == "cpu" ? "cpu" : "usage");
-            if (!std::isfinite(usage)) return "Mesure indisponible";
+            if (!std::isfinite(usage)) return "Measurement unavailable";
             std::string summary = format("%.1f", usage) + " %";
             if (std::isfinite(temperature)) summary += "  ·  " + format("%.0f", temperature) + " °C";
             return summary;
         }
         if (device.kind == "memory") {
             const auto* used = metric(device, "used");
-            if (!used || !std::isfinite(used->value)) return "Mesure indisponible";
-            std::string summary = format("%.1f", used->value) + " Go";
+            if (!used || !std::isfinite(used->value)) return "Measurement unavailable";
+            std::string summary = format("%.1f", used->value) + " GiB";
             if (std::isfinite(used->maximum) && used->maximum > 0)
-                summary += " / " + format("%.1f", used->maximum) + " Go";
+                summary += " / " + format("%.1f", used->maximum) + " GiB";
             return summary;
         }
         if (device.kind == "disk") {
             const double active = value("active"), read = value("read"), write = value("write");
-            std::string summary = std::isfinite(active) ? format("%.0f", active) + " %" : "Activité indisponible";
+            std::string summary = std::isfinite(active) ? format("%.0f", active) + " %" : "Activity unavailable";
             if (std::isfinite(read) && std::isfinite(write))
-                summary += "  ·  L " + format("%.1f", read) + " / E " + format("%.1f", write) + " Mo/s";
+                summary += "  ·  L " + format("%.1f", read) + " / E " + format("%.1f", write) + " MiB/s";
             return summary;
         }
         if (device.kind == "network") {
             const double receive = value("receive"), send = value("send");
             if (std::isfinite(receive) && std::isfinite(send))
-                return "R " + format("%.1f", receive) + " / E " + format("%.1f", send) + " Mbits/s";
+                return "R " + format("%.1f", receive) + " / E " + format("%.1f", send) + " Mbps";
         }
-        return "Mesure indisponible";
+        return "Measurement unavailable";
     }
     void performance()
     {
-        cyui::panelHeader("Performance", "Mesures en direct · 60 secondes d'historique · survolez les courbes pour lire les valeurs");
+        cyui::panelHeader("Performance", "Live readings · 60 seconds of history · hover over a graph for values");
         cyui::space(5);
         if (cyui::beginToolbar("##performanceToolbar")) {
-            const char* views[] { "Vue graphiques", "Vue détaillée" };
+            const char* views[] { "Graph view", "Detailed view" };
             int view = graphMode ? 0 : 1;
             if (cyui::segmented("##performanceView", views, 2, &view, cyui::dp(275.0f))) graphMode = view == 0;
             ImGui::SameLine();
             if (graphMode) {
-                if (cyui::button("Disposition", cyui::Variant::secondary)) ImGui::OpenPopup("##graphDisposition");
-                if (ImGui::BeginPopup("##graphDisposition")) {
-                    if (ImGui::MenuItem("Colonnes automatiques", nullptr, graphColumnsMode == 0)) graphColumnsMode = 0;
-                    if (ImGui::MenuItem("2 colonnes", nullptr, graphColumnsMode == 2)) graphColumnsMode = 2;
-                    if (ImGui::MenuItem("3 colonnes", nullptr, graphColumnsMode == 3)) graphColumnsMode = 3;
-                    if (ImGui::MenuItem("4 colonnes", nullptr, graphColumnsMode == 4)) graphColumnsMode = 4;
-                    if (ImGui::MenuItem("5 colonnes", nullptr, graphColumnsMode == 5)) graphColumnsMode = 5;
+                if (cyui::button("Layout", cyui::Variant::secondary)) ImGui::OpenPopup("##graphLayout");
+                if (ImGui::BeginPopup("##graphLayout")) {
+                    if (ImGui::MenuItem("Automatic columns", nullptr, graphColumnsMode == 0)) graphColumnsMode = 0;
+                    if (ImGui::MenuItem("2 columns", nullptr, graphColumnsMode == 2)) graphColumnsMode = 2;
+                    if (ImGui::MenuItem("3 columns", nullptr, graphColumnsMode == 3)) graphColumnsMode = 3;
+                    if (ImGui::MenuItem("4 columns", nullptr, graphColumnsMode == 4)) graphColumnsMode = 4;
+                    if (ImGui::MenuItem("5 columns", nullptr, graphColumnsMode == 5)) graphColumnsMode = 5;
                     ImGui::Separator();
-                    ImGui::MenuItem("Cartes compactes", nullptr, &compactGraphCards);
-                    ImGui::MenuItem("Afficher disques et réseau", nullptr, &graphExtraDevices);
+                    ImGui::MenuItem("Compact cards", nullptr, &compactGraphCards);
+                    ImGui::MenuItem("Show disks and network", nullptr, &graphExtraDevices);
                     ImGui::EndPopup();
                 }
             } else {
-                cyui::textDim("Choisissez une ressource dans la liste à gauche");
+                cyui::textDim("Select a resource from the list on the left");
             }
             ImGui::SameLine();
             cyui::alignRight(cyui::dp(145.0f));
-            if (cyui::button("Fenêtre séparée", cyui::Variant::secondary)) {
+            if (cyui::button("Separate window", cyui::Variant::secondary)) {
                 detached["all"] = true;
                 if (!demoMode) bridge.send("M 1\n");
             }
@@ -1317,7 +1317,7 @@ struct AppUi::State {
         cyui::endToolbar();
         cyui::space(6);
         if (!hasSnapshot || snapshot.devices.empty()) {
-            cyui::emptyState("Mesures en attente", "La collecte démarre dans cet onglet.", cyui::icon::refresh);
+            cyui::emptyState("Waiting for measurements", "Waiting for the first sample.", cyui::icon::refresh);
             return;
         }
         if (graphMode) {
@@ -1360,14 +1360,14 @@ struct AppUi::State {
     }
     void dialogs()
     {
-        if (cyui::beginModal("Arrêter les tâches ?###stopModal", &stopModal, 430.0f)) {
-            cyui::callout(cyui::Tone::warning, "Les modifications non enregistrées peuvent être perdues.");
+        if (cyui::beginModal("End tasks?###stopModal", &stopModal, 430.0f)) {
+            cyui::callout(cyui::Tone::warning, "Unsaved changes may be lost.");
             cyui::space(8);
-            cyui::textDim("%zu processus sélectionné(s)", pendingStop.size());
+            cyui::textDim("%zu processes selected", pendingStop.size());
             for (std::size_t i = 0; i < std::min<std::size_t>(8, pendingStop.size()); ++i)
                 if (const auto* process = find(pendingStop[i])) ImGui::BulletText("%s · PID %d", process->name.c_str(), process->id);
-            if (pendingStop.size() > 8) cyui::textFaint("... et %zu autres", pendingStop.size() - 8);
-            const int action = cyui::modalButtons("Arrêter", "Annuler", true);
+            if (pendingStop.size() > 8) cyui::textFaint("... and %zu more", pendingStop.size() - 8);
+            const int action = cyui::modalButtons("End", "Cancel", true);
             if (action == 1) {
                 for (const auto& key : pendingStop)
                     bridge.send("E " + std::to_string(nextRequest++) + " " + std::to_string(key.id)
@@ -1378,8 +1378,8 @@ struct AppUi::State {
         }
         if (detailsOpen) {
             ImGui::SetNextWindowSize(cyui::dp(780.0f, 580.0f), ImGuiCond_FirstUseEver);
-            if (ImGui::Begin("Informations avancées###advanced", &detailsOpen)) {
-                if (cyui::button("Copier tout", cyui::Variant::secondary)) ImGui::SetClipboardText(detailText.c_str());
+            if (ImGui::Begin("Advanced details###advanced", &detailsOpen)) {
+                if (cyui::button("Copy all", cyui::Variant::secondary)) ImGui::SetClipboardText(detailText.c_str());
                 ImGui::Separator();
                 ImGui::BeginChild("##report");
                 ImGui::TextUnformatted(detailText.c_str());
@@ -1393,7 +1393,7 @@ struct AppUi::State {
         bool anyOpen {};
         for (auto& [id, open] : detached) {
             if (!open) continue;
-            const auto title = id == "all" ? "Graphiques CPU, RAM et GPU###detached_all" : "Graphique " + id + "###detached_" + id;
+            const auto title = id == "all" ? "CPU, RAM, and GPU graphs###detached_all" : "Graph " + id + "###detached_" + id;
             const auto* main = ImGui::GetMainViewport();
             ImGui::SetNextWindowSize(cyui::dp(id == "all" ? 970.0f : 650.0f, id == "all" ? 650.0f : 420.0f), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(main->Pos.x + main->Size.x - cyui::dp(60.0f), main->Pos.y + cyui::dp(55.0f)), ImGuiCond_FirstUseEver);

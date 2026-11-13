@@ -11,7 +11,7 @@ std::string windowsError(const DWORD code)
     char* message {};
     FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                    nullptr, code, 0, reinterpret_cast<LPSTR>(&message), 0, nullptr);
-    std::string result = message != nullptr ? message : "Erreur Windows";
+    std::string result = message != nullptr ? message : "Windows error";
     if (message != nullptr) LocalFree(message);
     return result;
 }
@@ -21,7 +21,7 @@ struct Reader {
     std::size_t offset {};
     template <class T> T value()
     {
-        if (sizeof(T) > size - offset) throw std::runtime_error("Trame incomplète");
+        if (sizeof(T) > size - offset) throw std::runtime_error("Incomplete frame");
         T result;
         std::memcpy(&result, data + offset, sizeof(T));
         offset += sizeof(T);
@@ -30,7 +30,7 @@ struct Reader {
     std::string text()
     {
         const auto length = value<std::int32_t>();
-        if (length < 0 || static_cast<std::size_t>(length) > size - offset) throw std::runtime_error("Chaîne invalide");
+        if (length < 0 || static_cast<std::size_t>(length) > size - offset) throw std::runtime_error("Invalid string");
         std::string result(reinterpret_cast<const char*>(data + offset), static_cast<std::size_t>(length));
         offset += length;
         return result;
@@ -45,7 +45,7 @@ SystemSnapshot parseSnapshot(Reader& r)
     snapshot.memoryTotalGb = r.value<double>();
     snapshot.collectMs = r.value<double>();
     const auto count = r.value<std::int32_t>();
-    if (count < 0 || count > 100000) throw std::runtime_error("Nombre de processus invalide");
+    if (count < 0 || count > 100000) throw std::runtime_error("Invalid process count");
     snapshot.processes.reserve(count);
     for (int i = 0; i < count; ++i) {
         ProcessInfo process;
@@ -64,7 +64,7 @@ SystemSnapshot parseSnapshot(Reader& r)
         snapshot.processes.push_back(std::move(process));
     }
     const auto deviceCount = r.value<std::int32_t>();
-    if (deviceCount < 0 || deviceCount > 4096) throw std::runtime_error("Nombre de ressources invalide");
+    if (deviceCount < 0 || deviceCount > 4096) throw std::runtime_error("Invalid resource count");
     snapshot.devices.reserve(deviceCount);
     for (int i = 0; i < deviceCount; ++i) {
         DeviceInfo device;
@@ -73,7 +73,7 @@ SystemSnapshot parseSnapshot(Reader& r)
         device.description = r.text();
         device.kind = r.text();
         const auto metricCount = r.value<std::int32_t>();
-        if (metricCount < 0 || metricCount > 4096) throw std::runtime_error("Nombre de mesures invalide");
+        if (metricCount < 0 || metricCount > 4096) throw std::runtime_error("Invalid metric count");
         device.metrics.reserve(metricCount);
         for (int j = 0; j < metricCount; ++j) {
             MetricInfo metric;
@@ -106,12 +106,12 @@ bool BridgeClient::start()
 {
     wchar_t module[MAX_PATH] {};
     if (GetModuleFileNameW(nullptr, module, MAX_PATH) == 0) {
-        startupError_ = "Chemin de l'application indisponible.";
+        startupError_ = "Application path unavailable.";
         return false;
     }
     const auto bridge = std::filesystem::path(module).parent_path() / L"bridge" / L"CyWinTask.Bridge.exe";
     if (!std::filesystem::exists(bridge)) {
-        startupError_ = "Collecteur introuvable : bridge/CyWinTask.Bridge.exe";
+        startupError_ = "Collector not found: bridge/CyWinTask.Bridge.exe";
         return false;
     }
     SECURITY_ATTRIBUTES security { sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE };
@@ -172,7 +172,7 @@ void BridgeClient::readLoop()
         while (true) {
             std::uint32_t length {};
             if (!readExact(&length, sizeof(length))) break;
-            if (length == 0 || length > 16 * 1024 * 1024) throw std::runtime_error("Taille de trame invalide");
+            if (length == 0 || length > 16 * 1024 * 1024) throw std::runtime_error("Invalid frame size");
             std::vector<std::uint8_t> bytes(length);
             if (!readExact(bytes.data(), length)) break;
             Reader reader { bytes.data(), bytes.size() };
@@ -195,7 +195,7 @@ void BridgeClient::readLoop()
             }
         }
         std::lock_guard lock(mutex_);
-        if (error_.empty()) error_ = "Le collecteur s'est arrêté.";
+        if (error_.empty()) error_ = "The collector stopped.";
     } catch (const std::exception& ex) {
         std::lock_guard lock(mutex_);
         error_ = ex.what();

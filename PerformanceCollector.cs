@@ -19,7 +19,7 @@ public sealed class PerformanceCollector : IDisposable
     private NvidiaTemperatureSource? gpuTemperature;
     public PerformanceCollector()
     {
-        if (PdhOpenQuery(null, IntPtr.Zero, out query) != 0) throw new InvalidOperationException("Compteurs Windows indisponibles.");
+        if (PdhOpenQuery(null, IntPtr.Zero, out query) != 0) throw new InvalidOperationException("Windows performance counters unavailable.");
         try
         {
             Add("cpu", @"\Processor Information(*)\% Processor Time");
@@ -34,7 +34,7 @@ public sealed class PerformanceCollector : IDisposable
             adapters = GpuAdapter.Enumerate();
             gpuTemperature = new NvidiaTemperatureSource(adapters);
             using var key = Registry.LocalMachine.OpenSubKey(@"HARDWARE\DESCRIPTION\System\CentralProcessor\0");
-            processorName = key?.GetValue("ProcessorNameString")?.ToString()?.Trim() ?? "Processeur";
+            processorName = key?.GetValue("ProcessorNameString")?.ToString()?.Trim() ?? "Processor";
             PdhCollectQueryData(query);
         }
         catch { Dispose(); throw; }
@@ -52,21 +52,21 @@ public sealed class PerformanceCollector : IDisposable
         double? Get(string key, string instance) => data[key].TryGetValue(instance, out double v) ? v : null;
         var devices = new List<PerfDevice>();
         double? cpu = Get("cpu", "_Total") ?? system.Cpu;
-        var cpuMetrics = new List<PerfMetric> { new("cpu", "Utilisation totale", cpu, "%", 100), new("temperature", "Température CPU", cpuTemperature.Read(DateTime.UtcNow), "°C") };
+        var cpuMetrics = new List<PerfMetric> { new("cpu", "Total usage", cpu, "%", 100), new("temperature", "CPU temperature", cpuTemperature.Read(DateTime.UtcNow), "°C") };
         foreach (var entry in data["cpu"].Where(x => !x.Key.Contains("_Total")).OrderBy(x => int.TryParse(x.Key.Split(',')[0], out var g) ? g : 0).ThenBy(x => int.TryParse(x.Key.Split(',').Last(), out var c) ? c : 0))
-            cpuMetrics.Add(new("core:" + entry.Key, "Processeur logique " + entry.Key, Math.Clamp(entry.Value, 0, 100), "%", 100));
-        devices.Add(new("cpu", "Processeur", processorName + $" · {Environment.ProcessorCount} processeurs logiques", "cpu", cpuMetrics));
-        devices.Add(new("memory", "Mémoire", $"{system.UsedGb:N1} / {system.TotalGb:N1} Go utilisés · {system.MemoryPercent} %", "memory",
-            new() { new("used", "Mémoire physique utilisée", system.UsedGb, "Go", system.TotalGb), new("available", "Mémoire physique disponible", system.TotalGb - system.UsedGb, "Go", system.TotalGb), CommitMemory.Read() }));
+            cpuMetrics.Add(new("core:" + entry.Key, "Logical processor " + entry.Key, Math.Clamp(entry.Value, 0, 100), "%", 100));
+        devices.Add(new("cpu", "Processor", processorName + $" · {Environment.ProcessorCount} logical processors", "cpu", cpuMetrics));
+        devices.Add(new("memory", "Memory", $"{system.UsedGb:N1} / {system.TotalGb:N1} GiB used · {system.MemoryPercent} %", "memory",
+            new() { new("used", "Physical memory used", system.UsedGb, "GiB", system.TotalGb), new("available", "Physical memory available", system.TotalGb - system.UsedGb, "GiB", system.TotalGb), CommitMemory.Read() }));
         foreach (string disk in data["idle"].Keys.Union(data["read"].Keys).Union(data["write"].Keys).Where(x => x != "_Total").Order())
-            devices.Add(new("disk:" + disk, "Disque " + disk, "Disque physique · " + disk, "disk", new()
+            devices.Add(new("disk:" + disk, "Disk " + disk, "Physical disk · " + disk, "disk", new()
             {
-                new("active", "Temps d’activité", Get("idle", disk) is double idle ? Math.Clamp(100 - idle, 0, 100) : null, "%", 100),
-                new("read", "Lecture", Get("read", disk) / 1048576, "Mo/s"), new("write", "Écriture", Get("write", disk) / 1048576, "Mo/s")
+                new("active", "Active time", Get("idle", disk) is double idle ? Math.Clamp(100 - idle, 0, 100) : null, "%", 100),
+                new("read", "Read", Get("read", disk) / 1048576, "MiB/s"), new("write", "Write", Get("write", disk) / 1048576, "MiB/s")
             }));
         foreach (string network in data["receive"].Keys.Union(data["send"].Keys).Order())
-            devices.Add(new("network:" + network, "Réseau", network, "network", new()
-            { new("receive", "Réception", Get("receive", network) * 8 / 1000000, "Mbit/s"), new("send", "Envoi", Get("send", network) * 8 / 1000000, "Mbit/s") }));
+            devices.Add(new("network:" + network, "Network", network, "network", new()
+            { new("receive", "Receive", Get("receive", network) * 8 / 1000000, "Mbps"), new("send", "Send", Get("send", network) * 8 / 1000000, "Mbps") }));
         var engines = AggregateEngines(data["engine"]);
         foreach (var adapter in adapters)
         {
@@ -77,15 +77,15 @@ public sealed class PerformanceCollector : IDisposable
                 var values = data[key].Where(x => x.Key.StartsWith(adapter.Id, StringComparison.OrdinalIgnoreCase)).ToArray();
                 return values.Length == 0 ? null : values.Sum(x => x.Value) / 1073741824;
             }
-            var metrics = new List<PerfMetric> { new("usage", "Utilisation · moteur le plus actif", usage, "%", 100), new("temperature", "Température GPU", gpuTemperature?.Read(adapter.Id) ?? cpuTemperature.ReadGpu(adapter, adapters), "°C") };
+            var metrics = new List<PerfMetric> { new("usage", "Usage · busiest engine", usage, "%", 100), new("temperature", "GPU temperature", gpuTemperature?.Read(adapter.Id) ?? cpuTemperature.ReadGpu(adapter, adapters), "°C") };
             var types = new[] { "3D", "Copy", "VideoEncode", "VideoDecode" }.Concat(matching.Select(e => e.Key.Split('/')[2])).Distinct(StringComparer.OrdinalIgnoreCase);
             foreach (string type in types)
             {
                 var values = matching.Where(e => e.Key.EndsWith("/" + type, StringComparison.OrdinalIgnoreCase)).ToArray();
-                metrics.Add(new("engine:" + type, type switch { "VideoEncode" => "Encodage vidéo", "VideoDecode" => "Décodage vidéo", _ => type }, values.Length == 0 ? null : values.Max(e => e.Value), "%", 100));
+                metrics.Add(new("engine:" + type, type switch { "VideoEncode" => "Video encode", "VideoDecode" => "Video decode", _ => type }, values.Length == 0 ? null : values.Max(e => e.Value), "%", 100));
             }
-            metrics.Add(new("dedicated", "Mémoire GPU dédiée", Memory("dedicated"), "Go", adapter.DedicatedBytes / 1073741824d));
-            metrics.Add(new("shared", "Mémoire GPU partagée", Memory("shared"), "Go", adapter.SharedBytes / 1073741824d));
+            metrics.Add(new("dedicated", "Dedicated GPU memory", Memory("dedicated"), "GiB", adapter.DedicatedBytes / 1073741824d));
+            metrics.Add(new("shared", "Shared GPU memory", Memory("shared"), "GiB", adapter.SharedBytes / 1073741824d));
             devices.Add(new(adapter.Id, "GPU " + adapter.Index, adapter.Name, "gpu", metrics));
         }
         return new(DateTime.UtcNow, devices, timer.Elapsed.TotalMilliseconds);

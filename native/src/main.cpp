@@ -186,11 +186,11 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int)
     const int availableHeight = std::max(600, static_cast<int>(work.bottom - work.top));
     const int width = std::min(1500, availableWidth - 40);
     const int height = std::min(930, availableHeight - 40);
-    HWND window = CreateWindowW(wc.lpszClassName, L"CyWinTask — Gestionnaire des tâches",
+    HWND window = CreateWindowW(wc.lpszClassName, L"CyWinTask — Task Manager",
         WS_OVERLAPPEDWINDOW, work.left + (availableWidth - width) / 2,
         work.top + (availableHeight - height) / 2, width, height, nullptr, nullptr, instance, nullptr);
     if (!createDevice(window)) {
-        MessageBoxW(nullptr, L"Direct3D 11 est indisponible.", L"CyWinTask", MB_OK | MB_ICONERROR);
+        MessageBoxW(nullptr, L"Direct3D 11 is unavailable.", L"CyWinTask", MB_OK | MB_ICONERROR);
         DestroyWindow(window);
         UnregisterClassW(wc.lpszClassName, instance);
         return 1;

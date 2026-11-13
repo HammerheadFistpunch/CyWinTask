@@ -21,7 +21,7 @@ public sealed class ProcessSampler : IDisposable
 
     public ProcessSampler()
     {
-        if (IntPtr.Size != 8) throw new PlatformNotSupportedException("La collecte nécessite Windows x64.");
+        if (IntPtr.Size != 8) throw new PlatformNotSupportedException("Sampling requires Windows x64.");
         buffer = Marshal.AllocHGlobal(capacity);
     }
 
@@ -35,12 +35,12 @@ public sealed class ProcessSampler : IDisposable
             if (result == unchecked((int)0xC0000004))
             {
                 int next = Math.Max(checked(capacity * 2), length);
-                if (next > 128 * 1024 * 1024) throw new InvalidOperationException("Instantané système trop volumineux.");
+                if (next > 128 * 1024 * 1024) throw new InvalidOperationException("System snapshot too large.");
                 buffer = Marshal.ReAllocHGlobal(buffer, (IntPtr)next);
                 capacity = next;
                 continue;
             }
-            if (result < 0) throw new InvalidOperationException($"Collecte système indisponible (NTSTATUS {result:X8}).");
+            if (result < 0) throw new InvalidOperationException($"System snapshot unavailable (NTSTATUS {result:X8}).");
             break;
         }
         long now = Stopwatch.GetTimestamp();
@@ -49,7 +49,7 @@ public sealed class ProcessSampler : IDisposable
         var rows = new List<ProcessSample>(previous.Count + 32);
         for (int offset = 0; ;)
         {
-            if (offset < 0 || offset > length - 256) throw new InvalidOperationException("Format de l’instantané système non reconnu.");
+            if (offset < 0 || offset > length - 256) throw new InvalidOperationException("Unrecognized system snapshot format.");
             IntPtr p = IntPtr.Add(buffer, offset);
             int next = Marshal.ReadInt32(p);
             int id = checked((int)Marshal.ReadInt64(p, 80));
@@ -61,8 +61,8 @@ public sealed class ProcessSampler : IDisposable
                 IntPtr namePtr = Marshal.ReadIntPtr(p, 64);
                 long nameOffset = namePtr.ToInt64() - buffer.ToInt64();
                 if (nameBytes > 0 && (nameOffset < 0 || nameOffset > length - nameBytes || nameBytes % 2 != 0))
-                    throw new InvalidOperationException("Nom de processus invalide dans l’instantané.");
-                string name = nameBytes == 0 ? $"Processus {id}" : Marshal.PtrToStringUni(namePtr, nameBytes / 2)!;
+                    throw new InvalidOperationException("Invalid process name in snapshot.");
+                string name = nameBytes == 0 ? $"Processes {id}" : Marshal.PtrToStringUni(namePtr, nameBytes / 2)!;
                 double cpu = elapsed > 0 && previous.TryGetValue((id, created), out long old)
                     ? Math.Clamp((time - old) / 10000000d / elapsed / Environment.ProcessorCount * 100, 0, 100) : 0;
                 current[(id, created)] = time;
@@ -70,7 +70,7 @@ public sealed class ProcessSampler : IDisposable
                     Marshal.ReadInt64(p, 144), Marshal.ReadInt32(p, 4), Marshal.ReadInt32(p, 96)));
             }
             if (next == 0) break;
-            if (next < 256 || next > length - offset) throw new InvalidOperationException("Chaînage de processus invalide.");
+            if (next < 256 || next > length - offset) throw new InvalidOperationException("Invalid process record offset.");
             offset += next;
         }
         timestamp = now;
@@ -109,17 +109,17 @@ public static class ProcessActions
         try
         {
             if (!GetProcessTimes(handle, out long created, out _, out _, out _)) throw new Win32Exception(Marshal.GetLastWin32Error());
-            if (created != sample.Created) throw new InvalidOperationException("Ce processus a disparu ou son PID a été réutilisé.");
+            if (created != sample.Created) throw new InvalidOperationException("The process exited or its PID was reused.");
             return handle;
         }
         catch { handle.Dispose(); throw; }
     }
     public static void Terminate(ProcessSample sample)
     {
-        if (sample.Id <= 4 || sample.Id == Environment.ProcessId) throw new InvalidOperationException("Ce processus ne peut pas être arrêté depuis CyWinTask.");
+        if (sample.Id <= 4 || sample.Id == Environment.ProcessId) throw new InvalidOperationException("CyWinTask cannot end this process.");
         using var handle = Open(sample, 0x1);
         if (!IsProcessCritical(handle, out bool critical)) throw new Win32Exception(Marshal.GetLastWin32Error());
-        if (critical) throw new InvalidOperationException("Processus critique Windows : arrêt refusé.");
+        if (critical) throw new InvalidOperationException("Cannot end a critical Windows process.");
         if (!TerminateProcess(handle, 1)) throw new Win32Exception(Marshal.GetLastWin32Error());
     }
     public static string GetPath(ProcessSample sample)
@@ -128,8 +128,8 @@ public static class ProcessActions
     {
         using var handle = Open(sample, 0);
         var path = new StringBuilder(32768); int size = path.Capacity;
-        string executable = QueryFullProcessImageName(handle, 0, path, ref size) ? path.ToString() : "Accès au chemin indisponible";
-        return $"{sample.Name}  ·  PID {sample.Id}  ·  PID parent {sample.ParentId}\nExécutable : {executable}\nDémarré le {DateTime.FromFileTimeUtc(sample.Created).ToLocalTime():G}\nMémoire résidente : {sample.WorkingSet / 1048576d:N1} Mo  ·  Threads : {sample.Threads}  ·  Handles : {sample.Handles}\nInstantané à l’ouverture de l’inspecteur. Les processus protégés peuvent limiter l’accès.";
+        string executable = QueryFullProcessImageName(handle, 0, path, ref size) ? path.ToString() : "Executable path unavailable";
+        return $"{sample.Name}  ·  PID {sample.Id}  ·  Parent PID {sample.ParentId}\nExecutable: {executable}\nStarted: {DateTime.FromFileTimeUtc(sample.Created).ToLocalTime():G}\nWorking set : {sample.WorkingSet / 1048576d:N1} MiB  ·  Threads : {sample.Threads}  ·  Handles : {sample.Handles}\nSnapshot captured when the inspector opened. Protected processes may limit access.";
     }
     [DllImport("kernel32.dll", SetLastError = true)] private static extern SafeProcessHandle OpenProcess(uint access, bool inherit, int id);
     [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetProcessTimes(SafeProcessHandle handle, out long created, out long exited, out long kernel, out long user);
