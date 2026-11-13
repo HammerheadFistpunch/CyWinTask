@@ -29,7 +29,7 @@ public sealed class PerformanceResource : INotifyPropertyChanged
     {
         get
         {
-            string usage = Device.Metrics[0].Value is double value ? $"{value:N1} {Device.Metrics[0].Unit}" : "Indisponible / mesure en cours";
+            string usage = Device.Metrics[0].Value is double value ? $"{value:N1} {Device.Metrics[0].Unit}" : "Unavailable / waiting for samples";
             var temperature = Device.Metrics.FirstOrDefault(m => m.Id == "temperature")?.Value;
             return temperature is double degrees ? $"{usage} · {degrees:N0} °C" : usage;
         }
@@ -62,7 +62,7 @@ public partial class PerformanceView : UserControl
     private readonly List<(HistoryChart Chart, TextBlock Value)> charts = new();
     private string layoutKey = ""; private readonly List<(MetricHistory History, TextBlock Label)> legend = new();
     public PerformanceView() { InitializeComponent(); Devices.ItemsSource = ResourcesList; Dashboard.OpenResourceRequested += id => OpenDashboard(id); }
-    public void SetPaused(bool paused) { Pause.Content = paused ? "▶  Reprendre" : "Ⅱ  Pause"; foreach (var item in detached.Values) item.Pause.Content = Pause.Content; if (paused) CollectionStatus.Text = "Actualisation en pause"; }
+    public void SetPaused(bool paused) { Pause.Content = paused ? "▶  Resume" : "Ⅱ  Pause"; foreach (var item in detached.Values) item.Pause.Content = Pause.Content; if (paused) CollectionStatus.Text = "Updates paused"; }
     public void ShowError(string message) => CollectionStatus.Text = message;
     public void Apply(PerfSnapshot snapshot)
     {
@@ -79,7 +79,7 @@ public partial class PerformanceView : UserControl
         if (IsVisible && !graphMode) RefreshCharts();
         if (IsVisible && graphMode) Dashboard.Update(ResourcesList);
         foreach (var item in detached.Values) item.Dashboard.Update(ResourcesList);
-        CollectionStatus.Text = $"{snapshot.Time.ToLocalTime():HH:mm:ss} · Compteurs Windows {snapshot.CollectionMs:N1} ms · Historique limité à 60 s · Collecte active dans Performance ou une fenêtre séparée";
+        CollectionStatus.Text = $"{snapshot.Time.ToLocalTime():HH:mm:ss} · Windows counters {snapshot.CollectionMs:N1} ms · 60 s history · Sampling while Performance or a detached window is open";
     }
     private void Pause_Click(object sender, RoutedEventArgs e) => PauseRequested?.Invoke(this, EventArgs.Empty);
     public void ShowGraphMode(bool show)
@@ -87,7 +87,7 @@ public partial class PerformanceView : UserControl
         graphMode = show;
         DeviceLayout.Visibility = show ? Visibility.Collapsed : Visibility.Visible;
         Dashboard.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
-        GraphMode.Content = show ? "Vue détaillée" : "Vue graphiques";
+        GraphMode.Content = show ? "Detailed view" : "Graph view";
         RefreshVisible();
     }
     public void RefreshVisible()
@@ -109,7 +109,7 @@ public partial class PerformanceView : UserControl
         var board = new GraphDashboard { FilterId = resourceId, AllowPopOut = false };
         var window = new Window
         {
-            Title = resourceId == null ? "CyWinTask · Graphiques CPU, RAM et GPU" : "CyWinTask · Graphique",
+            Title = resourceId == null ? "CyWinTask · CPU, RAM, and GPU graphs" : "CyWinTask · Graphique",
             Icon = new BitmapImage(new Uri("pack://application:,,,/CyWinTask;component/Assets/cywintask-logo-transparent.png")),
             Width = resourceId == null ? 900 : 760,
             Height = resourceId == null ? 740 : 390,
@@ -127,7 +127,7 @@ public partial class PerformanceView : UserControl
         header.Children.Add(pause);
         header.Children.Add(new TextBlock
         {
-            Text = resourceId == null ? "CPU · RAM · GPU" : "Graphique de performance",
+            Text = resourceId == null ? "CPU · RAM · GPU" : "Performance graph",
             FontSize = 23,
             FontWeight = FontWeights.SemiBold,
             VerticalAlignment = VerticalAlignment.Center
@@ -154,7 +154,7 @@ public partial class PerformanceView : UserControl
         var device = resource.Device;
         DeviceTitle.Text = device.Title;
         DeviceDescription.Text = device.Description + (device.Kind == "gpu" ? " · " + resource.Summary : "");
-        ShowCores.Visibility = device.Kind is "cpu" or "gpu" ? Visibility.Visible : Visibility.Collapsed; ShowCores.Content = device.Kind == "gpu" ? "Afficher les autres moteurs GPU" : "Afficher les processeurs logiques";
+        ShowCores.Visibility = device.Kind is "cpu" or "gpu" ? Visibility.Visible : Visibility.Collapsed; ShowCores.Content = device.Kind == "gpu" ? "Show other GPU engines" : "Show logical processors";
         var mainEngines = new[] { "engine:3D", "engine:Copy", "engine:VideoEncode", "engine:VideoDecode", "dedicated", "shared" };
         var visible = device.Metrics.Where(m => m.Id != "temperature" && (device.Kind != "cpu" || !m.Id.StartsWith("core:") || ShowCores.IsChecked == true) && (device.Kind != "gpu" || (m.Id != "usage" && (mainEngines.Contains(m.Id) || ShowCores.IsChecked == true)))).ToArray();
         bool compact = device.Kind == "cpu" && ShowCores.IsChecked == true && CpuMode.SelectedIndex == 0;
@@ -186,7 +186,7 @@ public partial class PerformanceView : UserControl
                 var header = new DockPanel { Margin = new Thickness(0, 0, 0, 7) };
                 var value = new TextBlock { HorizontalAlignment = HorizontalAlignment.Right, Foreground = accent, FontSize = compact ? 10 : 13 };
                 DockPanel.SetDock(value, Dock.Right); header.Children.Add(value);
-                header.Children.Add(new TextBlock { Text = compact ? metric.Label.Replace("Processeur logique ", "CPU ") : metric.Label, FontSize = compact ? 10 : 13, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 0, 10, 0) });
+                header.Children.Add(new TextBlock { Text = compact ? metric.Label.Replace("Logical processor ", "CPU ") : metric.Label, FontSize = compact ? 10 : 13, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 0, 10, 0) });
                 var chart = new HistoryChart(history) { Accent = accent, Height = compact ? Math.Clamp(340d / Math.Ceiling(visible.Length / (double)Charts.Columns) - 27, 32, 80) : device.Kind == "gpu" ? 100 : device.Kind == "memory" ? 125 : visible.Length > 3 ? 95 : 165 };
                 container.Children.Add(header); container.Children.Add(chart);
                 Charts.Children.Add(container); charts.Add((chart, value));
@@ -195,17 +195,17 @@ public partial class PerformanceView : UserControl
         foreach (var (chart, value) in charts)
         {
             var metric = chart.History.Metric;
-            value.Text = metric.Value is double number ? $"{number:N1} {metric.Unit}" : "Indisponible";
+            value.Text = metric.Value is double number ? $"{number:N1} {metric.Unit}" : "Unavailable";
             chart.InvalidateVisual();
         }
-        foreach (var (history,label) in legend) label.Text = $"● {history.Metric.Label} : " + (history.Metric.Value is double v ? $"{v:N1} {history.Metric.Unit}" : "Indisponible");
+        foreach (var (history,label) in legend) label.Text = $"● {history.Metric.Label} : " + (history.Metric.Value is double v ? $"{v:N1} {history.Metric.Unit}" : "Unavailable");
         DeviceNote.Text = device.Kind switch
         {
-            "gpu" => "Utilisation : moteur le plus actif. Les moteurs dépendent du pilote ; un compteur absent reste indisponible. Température affichée si un capteur est disponible ; version du pilote non collectée.",
-            "network" => "Débits instantanés. Échelle automatique de chaque graphique, en Mbit/s. Les interfaces virtuelles sont également affichées.",
-            "disk" => "Courbes superposées : activité (vert), lecture (bleu), écriture (orange). Gauche : 0–100 %. Droite : Mo/s, échelle automatique commune aux deux débits.",
-            "cpu" => "Temps processeur mesuré par Windows. La température CPU nécessite LibreHardwareMonitor avec son interface WMI activée ; sinon elle reste indisponible. Les valeurs CPU peuvent différer du gestionnaire Windows.",
-            _ => "Mémoire virtuelle engagée : allocations garanties par Windows, adossées à la RAM ou aux fichiers de pagination. Le plafond indique la limite actuelle. Cette mesure ne représente pas les données effectivement écrites dans le fichier de pagination."
+            "gpu" => "Usage reflects the busiest GPU engine. Engine and temperature readings depend on the driver and sensors.",
+            "network" => "Live throughput in Mbps with automatic scaling. Includes virtual interfaces.",
+            "disk" => "Activity (green), read (blue), and write (orange). The left axis shows 0–100%. The right axis scales throughput in MiB/s.",
+            "cpu" => "CPU usage comes from Windows counters. CPU temperature requires LibreHardwareMonitor with WMI enabled. Usage can differ from Task Manager.",
+            _ => "Committed memory is backed by RAM or page files. The ceiling shows the current commit limit."
         };
     }
 }

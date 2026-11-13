@@ -18,12 +18,12 @@ public sealed class ProcessRow : INotifyPropertyChanged
     public double MemoryMb => Math.Round(Sample.WorkingSet / 1048576d, 1);
     private double totalMemoryBytes;
     public double MemoryPercent => totalMemoryBytes > 0 ? Math.Clamp(Sample.WorkingSet / totalMemoryBytes * 100, 0, 100) : 0;
-    public string MemoryLabel => $"{MemoryMb:N1} Mo · {MemoryPercent:N1} %";
+    public string MemoryLabel => $"{MemoryMb:N1} MiB · {MemoryPercent:N1} %";
     public void SetMemoryCapacity(double bytes) { if (totalMemoryBytes == bytes) return; totalMemoryBytes = bytes; Changed(nameof(MemoryPercent)); Changed(nameof(MemoryLabel)); }
     public int Threads => Sample.Threads;
     public int Handles => Sample.Handles;
     public System.Windows.Media.ImageSource? Icon { get; private set; }
-    public string Category { get; private set; } = "Processus en arrière-plan";
+    public string Category { get; private set; } = "Background processes";
     public void SetMetadata(ProcessMetadata info) { if (Icon != info.Icon) { Icon = info.Icon; Changed(nameof(Icon)); } if (Category != info.Category) { Category = info.Category; Changed(nameof(Category)); } }
     public System.Windows.Media.Brush BranchBackground => InBranch ? IsBranchRoot ? UiTheme.Brush("BranchRoot") : UiTheme.Brush("Branch") : System.Windows.Media.Brushes.Transparent;
     public Thickness BranchBorder { get; private set; }
@@ -37,7 +37,7 @@ public sealed class ProcessRow : INotifyPropertyChanged
         if (IsBranchRoot != first) { IsBranchRoot = first; Changed(nameof(IsBranchRoot)); Changed(nameof(BranchBackground)); }
     }    public int TreeOrder { get; private set; }
     public bool TreeVisible { get; private set; } = true;
-    public string DisplayCategory { get; private set; } = "Processus en arrière-plan";
+    public string DisplayCategory { get; private set; } = "Background processes";
     public Thickness TreeIndent { get; private set; }
     public Visibility ExpandVisibility { get; private set; } = Visibility.Collapsed;
     public string ExpandGlyph { get; private set; } = "▶";
@@ -89,7 +89,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Machine.Text = Environment.MachineName;
-        Cores.Text = $"{Environment.ProcessorCount} processeurs logiques";
+        Cores.Text = $"{Environment.ProcessorCount} logical processors";
         view = CollectionViewSource.GetDefaultView(rows);
         view.Filter = item => item is ProcessRow row && (treeEnabled ? row.TreeVisible : Matches(row.Sample, query) && (categoryFilter.Length == 0 || row.Category == categoryFilter));
         view.SortDescriptions.Add(new(nameof(ProcessRow.Name), ListSortDirection.Ascending));
@@ -138,7 +138,7 @@ public partial class MainWindow : Window
                         }
                     }
                     catch (OperationCanceledException) { break; }
-                    catch (Exception ex) { Status.Text = "Collecte interrompue : " + ex.Message; PerformancePage.ShowError(Status.Text); }
+                    catch (Exception ex) { Status.Text = "Sampling stopped: " + ex.Message; PerformancePage.ShowError(Status.Text); }
                 }
                 await Task.Delay(1000, stopping.Token);
             }
@@ -161,11 +161,11 @@ public partial class MainWindow : Window
         { rows.Remove(indexed[key]); indexed.Remove(key); }
         expandedProcesses.RemoveWhere(key => !indexed.ContainsKey(key));
         if (treeEnabled) RebuildTree();
-        CpuTotal.Text = snapshot.Cpu is double cpu ? $"{cpu:N0} %" : "Mesure…";
+        CpuTotal.Text = snapshot.Cpu is double cpu ? $"{cpu:N0} %" : "Sampling…";
         MemoryTotal.Text = $"{snapshot.MemoryPercent} %";
-        MemoryTotal.ToolTip = $"{snapshot.UsedGb:N1} / {snapshot.TotalGb:N1} Go";
+        MemoryTotal.ToolTip = $"{snapshot.UsedGb:N1} / {snapshot.TotalGb:N1} GiB";
         ProcessTotal.Text = rows.Count.ToString();
-        Status.Text = $"1 s · Collecte {snapshot.CollectionMs:N1} ms · Mise à jour {watch.Elapsed.TotalMilliseconds:N1} ms";
+        Status.Text = $"1 s · Sampling {snapshot.CollectionMs:N1} ms · Refresh {watch.Elapsed.TotalMilliseconds:N1} ms";
         UpdateEmpty();
     }
     private void CategoryFilter_Changed(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -189,7 +189,7 @@ public partial class MainWindow : Window
             if (GroupProcesses.IsChecked == true)
             {
                 var groups = new PropertyGroupDescription(treeEnabled ? nameof(ProcessRow.DisplayCategory) : nameof(ProcessRow.Category));
-                foreach (string category in new[] { "Applications", "Processus en arrière-plan", "Processus Windows" })
+                foreach (string category in new[] { "Applications", "Background processes", "Windows processes" })
                     if (categoryFilter.Length == 0 || categoryFilter == category) groups.GroupNames.Add(category);
                 view.GroupDescriptions.Add(groups);
             }
@@ -309,13 +309,13 @@ public partial class MainWindow : Window
         searchDelay.Stop(); searchDelay.Start();
     }
     private void Pause_Click(object sender, RoutedEventArgs e)
-    { paused = !paused; PerformancePage.SetPaused(paused); PauseButton.Content = paused ? "▶  Reprendre" : "Ⅱ  Pause"; if (paused) Status.Text = "Actualisation en pause"; }
+    { paused = !paused; PerformancePage.SetPaused(paused); PauseButton.Content = paused ? "▶  Resume" : "Ⅱ  Pause"; if (paused) Status.Text = "Updates paused"; }
     private void Selection_Changed(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
         if (EndButton == null) return;
         EndButton.IsEnabled = !actionPending && ProcessGrid.SelectedItems.Count > 0;
         InspectButton.IsEnabled = ProcessGrid.SelectedItem is ProcessRow;
-        EndButton.Content = ProcessGrid.SelectedItems.Count > 1 ? $"Arrêter {ProcessGrid.SelectedItems.Count} tâches" : "Arrêter la tâche";
+        EndButton.Content = ProcessGrid.SelectedItems.Count > 1 ? $"End {ProcessGrid.SelectedItems.Count} tasks" : "End task";
     }
     private void ProcessGrid_RightClick(object sender, MouseButtonEventArgs e)
     {
@@ -348,12 +348,12 @@ public partial class MainWindow : Window
         }
         Item($"{sample.Name} · PID {sample.Id}",()=>{},false);
         menu.Items.Add(new System.Windows.Controls.Separator());
-        Item(selected.Length>1?$"Arrêter les {selected.Length} processus sélectionnés…":"Arrêter ce processus…",async()=>await StopSamplesAsync(selected),!actionPending);
-        Item("Informations avancées…",()=>new ProcessDetailsWindow(sample){Owner=this}.Show());
+        Item(selected.Length>1?$"End {selected.Length} selected processes…":"End this process…",async()=>await StopSamplesAsync(selected),!actionPending);
+        Item("Advanced details…",()=>new ProcessDetailsWindow(sample){Owner=this}.Show());
         menu.Items.Add(new System.Windows.Controls.Separator());
-        Item("Ouvrir l’emplacement du fichier",async()=>await FileActionAsync(sample,false));
-        Item("Copier le chemin",async()=>await FileActionAsync(sample,true));
-        Item("Copier le nom et le PID",()=> { try{Clipboard.SetText($"{sample.Name} · PID {sample.Id}");}catch(Exception ex){ShowActionError(ex);} });
+        Item("Open file location",async()=>await FileActionAsync(sample,false));
+        Item("Copy file path",async()=>await FileActionAsync(sample,true));
+        Item("Copy name and PID",()=> { try{Clipboard.SetText($"{sample.Name} · PID {sample.Id}");}catch(Exception ex){ShowActionError(ex);} });
         return menu;
     }
     private async Task FileActionAsync(ProcessSample sample,bool copy)
@@ -366,15 +366,15 @@ public partial class MainWindow : Window
         }
         catch(Exception ex){ShowActionError(ex);}
     }
-    private void ShowActionError(Exception ex) => MessageBox.Show(this,ex.Message,"Action indisponible",MessageBoxButton.OK,MessageBoxImage.Information);    private async void Inspect_Click(object sender, RoutedEventArgs e)
+    private void ShowActionError(Exception ex) => MessageBox.Show(this,ex.Message,"Action unavailable",MessageBoxButton.OK,MessageBoxImage.Information);    private async void Inspect_Click(object sender, RoutedEventArgs e)
     {
-        if (ProcessGrid.SelectedItem is not ProcessRow row) { Status.Text = "Sélectionnez un processus pour l’inspecter."; return; }
+        if (ProcessGrid.SelectedItem is not ProcessRow row) { Status.Text = "Select a process to inspect."; return; }
         int version = ++detailVersion;
         var sample = row.Sample;
-        DetailPanel.Visibility = Visibility.Visible; Details.Text = "Lecture des détails…";
+        DetailPanel.Visibility = Visibility.Visible; Details.Text = "Loading details…";
         string result;
         try { result = await Task.Run(() => ProcessActions.Describe(sample)); }
-        catch (Exception ex) { result = $"{sample.Name} · PID {sample.Id}\nDétails indisponibles : {ex.Message}"; }
+        catch (Exception ex) { result = $"{sample.Name} · PID {sample.Id}\nDetails unavailable: {ex.Message}"; }
         if (version == detailVersion && !stopping.IsCancellationRequested) Details.Text = result;
     }
     private void CloseDetails_Click(object sender, RoutedEventArgs e) { detailVersion++; DetailPanel.Visibility = Visibility.Collapsed; }
@@ -385,7 +385,7 @@ public partial class MainWindow : Window
         if (selected.Length == 0) return;
         string names = string.Join("\n", selected.Take(8).Select(s => $"• {s.Name} ({s.Id})"));
         if (selected.Length > 8) names += $"\n… et {selected.Length - 8} autres";
-        if (MessageBox.Show(this, $"Arrêter {selected.Length} processus ?\n\n{names}\n\nLes modifications non enregistrées peuvent être perdues.", "Arrêter les tâches", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        if (MessageBox.Show(this, $"End {selected.Length} processes?\n\n{names}\n\nUnsaved changes may be lost.", "End tasks", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
         actionPending = true; EndButton.IsEnabled = false;
         var failures = await Task.Run(() =>
         {
@@ -396,7 +396,7 @@ public partial class MainWindow : Window
         });
         actionPending = false; EndButton.IsEnabled = ProcessGrid.SelectedItems.Count > 0;
         if (stopping.IsCancellationRequested) return;
-        Status.Text = $"{selected.Length - failures.Count} arrêt(s) demandé(s) · {failures.Count} échec(s)";
-        if (failures.Count > 0) MessageBox.Show(this, string.Join("\n", failures), "Résultat de l’arrêt", MessageBoxButton.OK, MessageBoxImage.Information);
+        Status.Text = $"{selected.Length - failures.Count} stop request(s) sent · {failures.Count} failed";
+        if (failures.Count > 0) MessageBox.Show(this, string.Join("\n", failures), "End task results", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 }

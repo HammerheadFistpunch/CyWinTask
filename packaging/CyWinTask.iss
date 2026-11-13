@@ -1,4 +1,4 @@
-﻿#define AppName "CyWinTask"
+﻿#define AppName "CyWinTask English"
 #ifndef AppVersion
   #define AppVersion "0.7.0"
 #endif
@@ -10,13 +10,13 @@
 #endif
 
 [Setup]
-AppId={{253A4C7D-4DC2-41B1-A02B-F4234F61C73D}
+AppId={{472B87AE-A613-4F21-9D02-A3CA9C10FDF8}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher=CyWinTask
-AppPublisherURL=https://github.com/MrMybal/CyWinTask
-DefaultDirName={localappdata}\Programs\CyWinTask
-DefaultGroupName=CyWinTask
+AppPublisherURL=https://github.com/HammerheadFistpunch/CyWinTask
+DefaultDirName={localappdata}\Programs\CyWinTask English
+DefaultGroupName=CyWinTask English
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
@@ -34,11 +34,10 @@ RestartApplications=no
 SetupLogging=yes
 
 [Languages]
-Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "Créer un raccourci sur le bureau"; GroupDescription: "Raccourcis :"; Flags: unchecked
+Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: unchecked
 
 [Files]
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -48,4 +47,4 @@ Name: "{group}\CyWinTask"; Filename: "{app}\CyWinTask.exe"; WorkingDir: "{app}"
 Name: "{autodesktop}\CyWinTask"; Filename: "{app}\CyWinTask.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\CyWinTask.exe"; Description: "Lancer CyWinTask"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\CyWinTask.exe"; Description: "Launch CyWinTask"; Flags: nowait postinstall skipifsilent

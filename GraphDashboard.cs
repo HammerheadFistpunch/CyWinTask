@@ -62,7 +62,7 @@ public sealed class GraphDashboard : UserControl
                 var titleRow = new DockPanel();
                 if (AllowPopOut)
                 {
-                    var open = new Button { Content = "Ouvrir ce graphique", Padding = new Thickness(9, 5, 9, 5) };
+                    var open = new Button { Content = "Open this graph", Padding = new Thickness(9, 5, 9, 5) };
                     open.Click += (_, _) => OpenResourceRequested?.Invoke(device.Id);
                     DockPanel.SetDock(open, Dock.Right);
                     titleRow.Children.Add(open);
@@ -71,7 +71,7 @@ public sealed class GraphDashboard : UserControl
                 {
                     Text = device.Kind switch
                     {
-                        "cpu" => "Processeur", "memory" => "Mémoire physique", _ => device.Title
+                        "cpu" => "Processor", "memory" => "Physical memory", _ => device.Title
                     },
                     FontSize = 19,
                     FontWeight = FontWeights.SemiBold,
@@ -102,7 +102,7 @@ public sealed class GraphDashboard : UserControl
             }
             if (chosen.Length == 0) cards.Children.Add(new TextBlock
             {
-                Text = "En attente des mesures CPU, mémoire et GPU…",
+                Text = "Waiting for CPU, memory, and GPU readings…",
                 Foreground = UiTheme.Brush("TextDim"),
                 Margin = new Thickness(12)
             });
@@ -112,14 +112,14 @@ public sealed class GraphDashboard : UserControl
             var metric = chart.History.Metric;
             value.Text = metric.Value is double number
                 ? resource.Device.Kind == "memory" && metric.Maximum is double maximum && maximum > 0
-                    ? $"{number:N1} / {maximum:N1} Go · {number / maximum * 100:N0} %"
+                    ? $"{number:N1} / {maximum:N1} GiB · {number / maximum * 100:N0} %"
                     : $"{number:N1} {metric.Unit}"
-                : "Mesure indisponible ou en cours";
+                : "Unavailable or waiting for samples";
             if (temperature != null)
             {
                 var sensor = resource.Device.Metrics.FirstOrDefault(m => m.Id == "temperature");
-                temperature.Text = sensor?.Value is double degrees ? $"Température : {degrees:N0} °C" : "Température : indisponible";
-                temperature.ToolTip = resource.Device.Kind == "cpu" ? "Capteur CPU fourni par LibreHardwareMonitor si disponible" : "Capteur fourni par le pilote GPU";
+                temperature.Text = sensor?.Value is double degrees ? $"Temperature: {degrees:N0} °C" : "Temperature: indisponible";
+                temperature.ToolTip = resource.Device.Kind == "cpu" ? "CPU sensor provided by LibreHardwareMonitor when available" : "Sensor provided by the GPU driver";
             }
             chart.InvalidateVisual();
         }
