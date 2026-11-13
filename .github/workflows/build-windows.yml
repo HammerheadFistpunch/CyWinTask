@@ -1,0 +1,95 @@
+name: Build Windows packages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-2022
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out CyWinTask
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned CyUI revision
+        id: cyui
+        shell: pwsh
+        env:
+          CYUI_READ_TOKEN: ${{ secrets.CYUI_READ_TOKEN }}
+        run: |
+          if (-not $env:CYUI_READ_TOKEN) {
+            throw 'Set the CYUI_READ_TOKEN Actions secret to a credential with read access to MrMybal/CyUI.'
+          }
+          $revision = (Get-Content native/CYUI_REVISION -Raw).Trim()
+          if ($revision -notmatch '^[0-9a-f]{40}$') {
+            throw 'native/CYUI_REVISION must contain a full Git commit SHA.'
+          }
+          "revision=$revision" >> $env:GITHUB_OUTPUT
+
+      - name: Check out CyUI
+        uses: actions/checkout@v6
+        with:
+          repository: MrMybal/CyUI
+          ref: ${{ steps.cyui.outputs.revision }}
+          token: ${{ secrets.CYUI_READ_TOKEN }}
+          path: third_party/CyUI
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Locate or install Inno Setup 6
+        id: inno
+        shell: pwsh
+        run: |
+          $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
+          if (-not (Test-Path -LiteralPath $compiler)) {
+            choco install innosetup --version=6.5.4 --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { throw 'Inno Setup installation failed.' }
+          }
+          if (-not (Test-Path -LiteralPath $compiler)) {
+            throw "Inno Setup compiler not found at $compiler."
+          }
+          "compiler=$compiler" >> $env:GITHUB_OUTPUT
+
+      - name: Build and verify Windows packages
+        shell: pwsh
+        env:
+          INNO_COMPILER: ${{ steps.inno.outputs.compiler }}
+        run: |
+          ./packaging/Build-Release.ps1 -InnoCompiler $env:INNO_COMPILER
+          $release = Get-ChildItem artifacts/releases -Directory
+          $installer = Get-ChildItem $release.FullName -Filter '*-setup.exe' -File
+          $portable = Get-ChildItem $release.FullName -Filter '*-portable.zip' -File
+          if (@($installer).Count -ne 1 -or @($portable).Count -ne 1) {
+            throw 'Expected one installer and one portable ZIP.'
+          }
+          $archive = [IO.Compression.ZipFile]::OpenRead($portable.FullName)
+          try {
+            $entries = $archive.Entries.FullName -replace '\\', '/'
+            foreach ($path in @('CyWinTask.exe', 'bridge/CyWinTask.Bridge.exe')) {
+              if ($path -notin $entries) { throw "Missing from portable package: $path" }
+            }
+          } finally {
+            $archive.Dispose()
+          }
+
+      - name: Upload installer, portable ZIP, and checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: CyWinTask-Windows-x64
+          if-no-files-found: error
+          path: |
+            artifacts/releases/*/*-setup.exe
+            artifacts/releases/*/*-portable.zip
+            artifacts/releases/*/SHA256SUMS.txt
